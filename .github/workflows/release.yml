@@ -37,11 +37,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate
+        run: pnpm run validate
+
       - name: Build
         run: pnpm run build
-
-      - name: Test
-        run: pnpm test
 
   release:
     name: Release

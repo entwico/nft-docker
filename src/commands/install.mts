@@ -1,8 +1,7 @@
 import { execSync } from 'child_process';
+import { type PmName, detectPm } from '../utils/detect-pm.mjs';
 import { preinstall } from './preinstall.mjs';
 import { prune } from './prune.mjs';
-import { detectPm } from '../utils/detect-pm.mjs';
-import type { PmName } from '../utils/detect-pm.mjs';
 
 const installCommands: Record<PmName, string> = {
   pnpm: 'pnpm install --frozen-lockfile',

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { parseArgs } from 'util';
-import { preinstall } from './commands/preinstall.mjs';
 import { install } from './commands/install.mjs';
+import { preinstall } from './commands/preinstall.mjs';
 import { prune } from './commands/prune.mjs';
 
 const [command, ...rest] = process.argv.slice(2);

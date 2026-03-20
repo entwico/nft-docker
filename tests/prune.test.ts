@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'fs';
-import { join } from 'path';
 import { tmpdir } from 'os';
+import { join } from 'path';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('@vercel/nft', () => ({
   nodeFileTrace: vi.fn(),
@@ -39,10 +39,7 @@ describe('prune', () => {
     const { nodeFileTrace } = await import('@vercel/nft');
 
     vi.mocked(nodeFileTrace).mockResolvedValue({
-      fileList: new Set([
-        'entry.mjs',
-        'node_modules/pkg-a/index.js',
-      ]),
+      fileList: new Set(['entry.mjs', 'node_modules/pkg-a/index.js']),
       esmFileList: new Set(),
       reasons: new Map(),
       warnings: new Set(),
@@ -66,10 +63,7 @@ describe('prune', () => {
 
     const { nodeFileTrace } = await import('@vercel/nft');
     vi.mocked(nodeFileTrace).mockResolvedValue({
-      fileList: new Set([
-        'entry.mjs',
-        'node_modules/@scope/pkg/index.js',
-      ]),
+      fileList: new Set(['entry.mjs', 'node_modules/@scope/pkg/index.js']),
       esmFileList: new Set(),
       reasons: new Map(),
       warnings: new Set(),
