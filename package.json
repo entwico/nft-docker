@@ -24,7 +24,7 @@
   },
   "publishConfig": {
     "access": "public",
-    "registry": "https://registry.npmjs.org"
+    "provenance": true
   },
   "dependencies": {
     "@vercel/nft": "^1.4.0"
