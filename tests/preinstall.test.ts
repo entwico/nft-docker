@@ -77,6 +77,7 @@ describe('preinstall', () => {
     await preinstall();
 
     expect(existsSync(join(tempDir, '.npmrc'))).toBe(false);
+    expect(existsSync(join(tempDir, 'pnpm-workspace.yaml'))).toBe(false);
   });
 
   it('does nothing for yarn', async () => {
@@ -85,5 +86,47 @@ describe('preinstall', () => {
     await preinstall();
 
     expect(existsSync(join(tempDir, '.npmrc'))).toBe(false);
+    expect(existsSync(join(tempDir, 'pnpm-workspace.yaml'))).toBe(false);
+  });
+
+  it('creates pnpm-workspace.yaml with nodeLinker: hoisted for pnpm', async () => {
+    writeFileSync(join(tempDir, 'package.json'), JSON.stringify({ packageManager: 'pnpm@11.0.8' }));
+
+    await preinstall();
+
+    const content = readFileSync(join(tempDir, 'pnpm-workspace.yaml'), 'utf-8');
+
+    expect(content).toBe('nodeLinker: hoisted\n');
+  });
+
+  it('appends nodeLinker: hoisted to existing pnpm-workspace.yaml', async () => {
+    writeFileSync(join(tempDir, 'package.json'), JSON.stringify({ packageManager: 'pnpm@11.0.8' }));
+    writeFileSync(join(tempDir, 'pnpm-workspace.yaml'), 'minimumReleaseAge: 0\n');
+
+    await preinstall();
+
+    const content = readFileSync(join(tempDir, 'pnpm-workspace.yaml'), 'utf-8');
+
+    expect(content).toBe('minimumReleaseAge: 0\nnodeLinker: hoisted\n');
+  });
+
+  it('skips if pnpm-workspace.yaml already has nodeLinker: hoisted', async () => {
+    writeFileSync(join(tempDir, 'package.json'), JSON.stringify({ packageManager: 'pnpm@11.0.8' }));
+    writeFileSync(join(tempDir, 'pnpm-workspace.yaml'), 'nodeLinker: hoisted\n');
+
+    await preinstall();
+
+    const content = readFileSync(join(tempDir, 'pnpm-workspace.yaml'), 'utf-8');
+
+    expect(content).toBe('nodeLinker: hoisted\n');
+  });
+
+  it('throws if pnpm-workspace.yaml has a non-hoisted nodeLinker', async () => {
+    writeFileSync(join(tempDir, 'package.json'), JSON.stringify({ packageManager: 'pnpm@11.0.8' }));
+    writeFileSync(join(tempDir, 'pnpm-workspace.yaml'), 'nodeLinker: isolated\n');
+
+    await expect(preinstall()).rejects.toThrow(
+      'pnpm-workspace.yaml has nodeLinker: isolated, but nft-docker requires nodeLinker: hoisted for pnpm',
+    );
   });
 });
