@@ -7,14 +7,26 @@ import { prune } from './commands/prune.mjs';
 
 const [command, ...rest] = process.argv.slice(2);
 
-const commands: Record<string, (entrypoints: string[]) => Promise<void>> = {
+interface CommandOptions {
+  rewrite: boolean;
+  preserve: string[];
+  minify: boolean;
+  sourcemap: boolean;
+  verbose: boolean;
+}
+
+const commands: Record<string, (entrypoints: string[], opts: CommandOptions) => Promise<void>> = {
   preinstall: () => preinstall(),
   install,
   prune,
 };
 
 if (!command || !commands[command]) {
-  console.error('usage: nft-docker <preinstall|install|prune> [--entrypoint|-e <path>]...');
+  console.error(
+    'usage: nft-docker <preinstall|install|prune> ' +
+      '[-e|--entrypoint <path>]... [-p|--preserve <glob>]... ' +
+      '[-r|--rewrite] [--no-minify] [--no-sourcemap] [-v|--verbose]',
+  );
   process.exit(1);
 }
 
@@ -23,11 +35,22 @@ try {
     args: rest,
     options: {
       entrypoint: { type: 'string', short: 'e', multiple: true },
+      preserve: { type: 'string', short: 'p', multiple: true },
+      rewrite: { type: 'boolean', short: 'r', default: false },
+      'no-minify': { type: 'boolean', default: false },
+      'no-sourcemap': { type: 'boolean', default: false },
+      verbose: { type: 'boolean', short: 'v', default: false },
     },
     strict: true,
   });
 
-  await commands[command](values.entrypoint ?? []);
+  await commands[command](values.entrypoint ?? [], {
+    rewrite: values.rewrite ?? false,
+    preserve: values.preserve ?? [],
+    minify: !(values['no-minify'] ?? false),
+    sourcemap: !(values['no-sourcemap'] ?? false),
+    verbose: values.verbose ?? false,
+  });
 } catch (err) {
   console.error((err as Error).message);
   process.exit(1);

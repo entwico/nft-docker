@@ -1,17 +1,84 @@
 import { readdir, unlink, rmdir } from 'fs/promises';
-import { join } from 'path';
+import { dirname, join, resolve } from 'path';
 import { nodeFileTrace } from '@vercel/nft';
+import { resolveExternalRoots } from '../bundle/external-roots.mjs';
+import { rewrite } from '../bundle/rewrite.mjs';
+import { expandGlobs } from '../utils/expand-globs.mjs';
 
-export async function prune(entrypoints: string[]) {
+export interface PruneOptions {
+  rewrite?: boolean;
+  preserve?: string[];
+  minify?: boolean;
+  sourcemap?: boolean;
+  verbose?: boolean;
+}
+
+export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
   if (entrypoints.length === 0) {
     throw new Error('usage: nft-docker prune --entrypoint <path>');
   }
 
+  const verbose = opts.verbose ?? false;
   const cwd = process.cwd();
+  let traceEntries = entrypoints;
+  let externalRoots: string[] = [];
 
-  console.log('tracing entrypoints:', entrypoints.join(', '));
+  if (opts.rewrite) {
+    const outDir = dirname(resolve(cwd, entrypoints[0]));
 
-  const result = await nodeFileTrace(entrypoints, { base: cwd });
+    if (verbose) {
+      console.log('rewriting entrypoints:', entrypoints.join(', '));
+      console.log('output dir:           ', outDir);
+    } else {
+      console.log(`rewriting ${entrypoints.length} entry(ies) → ${outDir}`);
+    }
+
+    const { classification } = await rewrite({
+      entrypoints,
+      outDir,
+      cwd,
+      minify: opts.minify,
+      sourcemap: opts.sourcemap,
+    });
+
+    const externalCount = classification.external.size;
+
+    if (verbose) {
+      console.log(`\nforce-external packages (${externalCount}):`);
+
+      for (const pkg of [...classification.external].sort()) {
+        const rs = classification.reasons.get(pkg) ?? [];
+        const formatted = rs.map((r) => (typeof r === 'string' ? r : `via ${r.reachableFrom}`)).join(', ');
+
+        console.log(`  ${pkg}  [${formatted}]`);
+      }
+    } else {
+      console.log(`force-external: ${externalCount} packages`);
+    }
+
+    traceEntries = entrypoints.map((e) => resolve(cwd, e));
+    externalRoots = resolveExternalRoots(classification.external, cwd);
+
+    if (verbose && externalRoots.length > 0) {
+      console.log(`adding ${externalRoots.length} external package root(s) to NFT trace`);
+    }
+
+    if (verbose) console.log('');
+  }
+
+  const preserved = await expandGlobs(opts.preserve ?? [], cwd);
+
+  if (preserved.length > 0) {
+    console.log(`preserving ${preserved.length} additional file(s) via --preserve`);
+  }
+
+  const allTraceInputs = [...traceEntries, ...externalRoots, ...preserved];
+
+  if (verbose) {
+    console.log('tracing entrypoints:', traceEntries.join(', '));
+  }
+
+  const result = await nodeFileTrace(allTraceInputs, { base: cwd });
 
   const tracedSet = new Set(
     [...result.fileList].filter((f) => f.startsWith('node_modules/') || f.includes('/node_modules/')),
@@ -25,14 +92,22 @@ export async function prune(entrypoints: string[]) {
     if (match) packages.add(match[1]);
   }
 
-  console.log('traced packages:', packages.size);
-  console.log('traced files:', tracedSet.size);
+  const warningCount = result.warnings.size;
 
-  console.log('\npackages:');
+  if (verbose) {
+    console.log('traced packages:', packages.size);
+    console.log('traced files:', tracedSet.size);
+    if (warningCount > 0) console.log('NFT warnings:', warningCount);
 
-  [...packages].sort().forEach((p) => console.log(' ', p));
+    console.log('\npackages:');
+    [...packages].sort().forEach((p) => console.log(' ', p));
 
-  console.log('\npruning non-traced files...');
+    console.log('\npruning non-traced files...');
+  } else {
+    const warnSuffix = warningCount > 0 ? `, ${warningCount} NFT warnings` : '';
+
+    console.log(`traced ${packages.size} packages, ${tracedSet.size} files${warnSuffix}`);
+  }
 
   const start = performance.now();
   let deleted = 0;
@@ -44,7 +119,7 @@ export async function prune(entrypoints: string[]) {
     const results = await Promise.all(
       entries.map(async (entry) => {
         const fullPath = join(dir, entry.name);
-        const relativePath = fullPath.slice(cwd.length + 1); // strip cwd + separator
+        const relativePath = fullPath.slice(cwd.length + 1);
 
         if (entry.isDirectory()) {
           const empty = await walkAndPrune(fullPath);
@@ -70,7 +145,6 @@ export async function prune(entrypoints: string[]) {
       }),
     );
 
-    // directory is empty if all children were removed
     return results.every(Boolean);
   }
 
@@ -78,5 +152,5 @@ export async function prune(entrypoints: string[]) {
 
   const elapsed = ((performance.now() - start) / 1000).toFixed(1);
 
-  console.log(`\ndone. deleted ${deleted} files from node_modules in ${elapsed}s`);
+  console.log(`deleted ${deleted} files in ${elapsed}s`);
 }

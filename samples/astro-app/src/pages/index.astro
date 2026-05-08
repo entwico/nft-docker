@@ -1,0 +1,23 @@
+---
+const routes = [
+  { href: '/api/log', label: 'pino + pino-pretty (worker thread transport)' },
+  { href: '/api/resize', label: 'sharp (native .node bindings)' },
+  { href: '/api/stream', label: 'rxjs instanceof check (singleton)' },
+  { href: '/api/compute?n=10', label: 'new Worker(...) compute' },
+  { href: '/products', label: 'React + Radix Dialog (shared chunk)' },
+  { href: '/docs', label: 'React + Radix Tabs (shared chunk)' },
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>nft-docker bundler samples</title>
+  </head>
+  <body>
+    <h1>Bundler corner cases</h1>
+    <ul>
+      {routes.map((r) => <li><a href={r.href}>{r.label}</a></li>)}
+    </ul>
+  </body>
+</html>

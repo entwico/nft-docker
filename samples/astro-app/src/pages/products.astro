@@ -1,0 +1,19 @@
+---
+import { DemoDialog } from '../components/Dialog';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Products</title>
+  </head>
+  <body>
+    <h1>Products</h1>
+    <p>This page imports a Radix Dialog. React + Radix should resolve to the same instance shared with /docs.</p>
+    <DemoDialog
+      title="Hello"
+      description="If this opens, hydration found a single React instance"
+      client:visible
+    />
+  </body>
+</html>

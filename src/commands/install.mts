@@ -1,7 +1,7 @@
 import { execSync } from 'child_process';
 import { type PmName, detectPm } from '../utils/detect-pm.mjs';
 import { preinstall } from './preinstall.mjs';
-import { prune } from './prune.mjs';
+import { prune, type PruneOptions } from './prune.mjs';
 
 const installCommands: Record<PmName, string> = {
   pnpm: 'pnpm install --frozen-lockfile',
@@ -9,7 +9,7 @@ const installCommands: Record<PmName, string> = {
   yarn: 'yarn install --frozen-lockfile',
 };
 
-export async function install(entrypoints: string[]) {
+export async function install(entrypoints: string[], opts: PruneOptions = {}) {
   if (entrypoints.length === 0) {
     throw new Error('usage: nft-docker install --entrypoint <path>');
   }
@@ -23,5 +23,5 @@ export async function install(entrypoints: string[]) {
 
   execSync(cmd, { stdio: 'inherit' });
 
-  await prune(entrypoints);
+  await prune(entrypoints, opts);
 }

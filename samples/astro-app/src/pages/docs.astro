@@ -1,0 +1,29 @@
+---
+import { DemoTabs } from '../components/Tabs';
+
+const tabs = [
+  { id: 'install', label: 'Install', content: 'pnpm add @entwico/nft-docker' },
+  { id: 'usage', label: 'Usage', content: 'npx @entwico/nft-docker prune -e ./dist/server/entry.mjs' },
+  {
+    id: 'why',
+    label: 'Why',
+    content: 'Smaller images, faster cold starts.',
+    dialog: {
+      title: 'How NFT trims images',
+      description: 'NFT traces actual runtime imports and deletes the rest.',
+    },
+  },
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Docs</title>
+  </head>
+  <body>
+    <h1>Docs</h1>
+    <p>Radix Tabs that embeds a Radix Dialog in one tab. /products also uses the same Dialog directly — both reach it through different import edges.</p>
+    <DemoTabs tabs={tabs} client:visible />
+  </body>
+</html>

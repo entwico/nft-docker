@@ -4,7 +4,7 @@ import prettierRecommended from 'eslint-plugin-prettier/recommended';
 import tseslint from 'typescript-eslint';
 
 export default [
-  { ignores: ['node_modules/*', 'dist/*'] },
+  { ignores: ['node_modules/*', 'dist/*', 'samples/**'] },
 
   pluginJs.configs.recommended,
 
