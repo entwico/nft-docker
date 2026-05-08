@@ -22,6 +22,7 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
   const cwd = process.cwd();
   let traceEntries = entrypoints;
   let externalRoots: string[] = [];
+  let forceExternal = new Set<string>();
 
   if (opts.rewrite) {
     const outDir = dirname(resolve(cwd, entrypoints[0]));
@@ -58,6 +59,7 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
 
     traceEntries = entrypoints.map((e) => resolve(cwd, e));
     externalRoots = resolveExternalRoots(classification.external, cwd);
+    forceExternal = classification.external;
 
     if (verbose && externalRoots.length > 0) {
       console.log(`adding ${externalRoots.length} external package root(s) to NFT trace`);
@@ -92,6 +94,32 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
     if (match) packages.add(match[1]);
   }
 
+  // node's resolver needs package.json for every enclosing package; NFT doesn't always emit it.
+  for (const f of [...tracedSet]) {
+    const segments = f.split('/');
+
+    for (let i = 0; i < segments.length - 1; i++) {
+      if (segments[i] !== 'node_modules') continue;
+
+      const next = segments[i + 1];
+
+      if (!next || next.startsWith('.')) continue;
+
+      const pkgEnd = next.startsWith('@') ? i + 2 : i + 1;
+
+      if (pkgEnd >= segments.length) continue;
+
+      tracedSet.add(`${segments.slice(0, pkgEnd + 1).join('/')}/package.json`);
+    }
+  }
+
+  // force-external packages have untraceable codepaths by definition; preserve them whole.
+  const keepRoots = new Set<string>();
+
+  for (const pkg of forceExternal) {
+    keepRoots.add(`node_modules/${pkg}`);
+  }
+
   const warningCount = result.warnings.size;
 
   if (verbose) {
@@ -113,6 +141,14 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
   let deleted = 0;
   const nmPath = join(cwd, 'node_modules');
 
+  function isInsideKeepRoot(relativePath: string): boolean {
+    for (const root of keepRoots) {
+      if (relativePath === root || relativePath.startsWith(`${root}/`)) return true;
+    }
+
+    return false;
+  }
+
   async function walkAndPrune(dir: string): Promise<boolean> {
     const entries = await readdir(dir, { withFileTypes: true });
 
@@ -122,6 +158,8 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
         const relativePath = fullPath.slice(cwd.length + 1);
 
         if (entry.isDirectory()) {
+          if (keepRoots.has(relativePath)) return false;
+
           const empty = await walkAndPrune(fullPath);
 
           if (empty) {
@@ -132,6 +170,8 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
 
           return false;
         }
+
+        if (isInsideKeepRoot(relativePath)) return false;
 
         if (!tracedSet.has(relativePath)) {
           await unlink(fullPath);
