@@ -1,5 +1,11 @@
 ## [1.0.1](https://github.com/entwico/nft-docker/compare/v1.0.0...v1.0.1) (2026-03-20)
 
+## 1.2.0
+
+### Minor Changes
+
+- 8fc8bef: add pnpm 11 support
+
 ## 1.1.2
 
 ### Patch Changes
