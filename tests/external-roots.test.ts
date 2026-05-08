@@ -64,4 +64,14 @@ describe('resolveExternalRoots', () => {
   it('returns empty for empty input', () => {
     expect(resolveExternalRoots(new Set(), tmp)).toEqual([]);
   });
+
+  it('skips node builtins shadowed by userland packages', () => {
+    // punycode is a deprecated builtin and a userland npm package;
+    // require.resolve returns the bare builtin name, which is not a path.
+    writePkg('punycode', { main: './punycode.js' }, { 'punycode.js': 'module.exports = {}' });
+
+    const roots = resolveExternalRoots(new Set(['punycode']), tmp);
+
+    expect(roots).toEqual([]);
+  });
 });

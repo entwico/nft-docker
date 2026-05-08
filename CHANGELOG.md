@@ -1,5 +1,11 @@
 ## [1.0.1](https://github.com/entwico/nft-docker/compare/v1.0.0...v1.0.1) (2026-03-20)
 
+## 1.1.2
+
+### Patch Changes
+
+- fix `--rewrite` crashing on packages that shadow node builtins (e.g. `punycode`)
+
 ## 1.1.1
 
 ### Patch Changes

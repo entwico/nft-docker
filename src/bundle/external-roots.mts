@@ -1,6 +1,6 @@
 import { existsSync } from 'fs';
-import { createRequire } from 'module';
-import { join } from 'path';
+import { createRequire, isBuiltin } from 'module';
+import { isAbsolute, join } from 'path';
 
 // rolldown wraps CJS requires in helpers (__require, __toESM) that NFT
 // doesn't recognize as import edges, so externals from the bundled
@@ -11,15 +11,30 @@ export function resolveExternalRoots(external: Set<string>, cwd: string): string
   const out: string[] = [];
 
   for (const pkg of external) {
-    try {
-      out.push(localRequire.resolve(pkg, { paths: [cwd] }));
-    } catch {
-      // no main / broken exports — fall back to package.json so the
-      // package directory at least gets kept.
-      const pkgJson = join(cwd, 'node_modules', pkg, 'package.json');
+    // builtins (e.g. `punycode`) need no node_modules entry at runtime; node provides them.
+    if (isBuiltin(pkg)) continue;
 
-      if (existsSync(pkgJson)) out.push(pkgJson);
+    let resolved: string | null = null;
+
+    try {
+      const r = localRequire.resolve(pkg, { paths: [cwd] });
+
+      // require.resolve returns the bare name for shadowed builtins; ignore those.
+      if (isAbsolute(r)) resolved = r;
+    } catch {
+      // fall through to package.json fallback.
     }
+
+    if (resolved) {
+      out.push(resolved);
+      continue;
+    }
+
+    // no main / broken exports / resolved to builtin — fall back to package.json
+    // so the package directory at least gets kept.
+    const pkgJson = join(cwd, 'node_modules', pkg, 'package.json');
+
+    if (existsSync(pkgJson)) out.push(pkgJson);
   }
 
   return out;
