@@ -2,7 +2,6 @@
 
 import { parseArgs } from 'util';
 import { install } from './commands/install.mjs';
-import { preinstall } from './commands/preinstall.mjs';
 import { prune } from './commands/prune.mjs';
 
 const [command, ...rest] = process.argv.slice(2);
@@ -16,14 +15,13 @@ interface CommandOptions {
 }
 
 const commands: Record<string, (entrypoints: string[], opts: CommandOptions) => Promise<void>> = {
-  preinstall: () => preinstall(),
   install,
   prune,
 };
 
 if (!command || !commands[command]) {
   console.error(
-    'usage: nft-docker <preinstall|install|prune> ' +
+    'usage: nft-docker <install|prune> ' +
       '[-e|--entrypoint <path>]... [-p|--preserve <glob>]... ' +
       '[-r|--rewrite] [--no-minify] [--no-sourcemap] [-v|--verbose]',
   );

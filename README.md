@@ -8,23 +8,15 @@ Designed to be run via `npx` inside a Dockerfile — not a project dependency.
 
 ### `install`
 
-Full Docker-build cycle: preinstall → install → prune.
+Full Docker-build cycle: install (with hoisted linker for pnpm) → prune.
 
 ```bash
 npx @entwico/nft-docker install -e ./dist/server/entry.mjs
 ```
 
-### `preinstall`
-
-For pnpm projects only: ensures `.npmrc` has `node-linker=hoisted` (creates or appends as needed). No-op for npm/yarn.
-
-```bash
-npx @entwico/nft-docker preinstall
-```
-
 ### `prune`
 
-Trace + delete pass on an existing `node_modules/`.
+Trace + delete pass on an existing `node_modules/`. For pnpm projects, the install that produced `node_modules/` must have used `--node-linker=hoisted` — symlinked layouts cannot be pruned reliably.
 
 ```bash
 npx @entwico/nft-docker prune -e ./dist/server/entry.mjs
@@ -70,8 +62,7 @@ RUN corepack enable pnpm
 WORKDIR /srv
 
 COPY package.json pnpm-lock.yaml /srv/
-RUN npx @entwico/nft-docker preinstall
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --node-linker=hoisted
 
 COPY . /srv/
 RUN pnpm run build

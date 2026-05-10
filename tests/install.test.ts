@@ -1,5 +1,5 @@
 import { execSync } from 'child_process';
-import { mkdtempSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'fs';
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -33,7 +33,7 @@ describe('install', () => {
     await expect(install([])).rejects.toThrow('usage: nft-docker install --entrypoint <path>');
   });
 
-  it('runs preinstall, frozen install, and prune for pnpm', async () => {
+  it('runs frozen install with hoisted linker and prune for pnpm', async () => {
     writeFileSync(join(tempDir, 'package.json'), JSON.stringify({ packageManager: 'pnpm@9.15.0' }));
     mkdirSync(join(tempDir, 'node_modules', 'pkg-a'), { recursive: true });
     writeFileSync(join(tempDir, 'node_modules', 'pkg-a', 'index.js'), '');
@@ -50,13 +50,10 @@ describe('install', () => {
     const { install } = await import('../src/commands/install.mjs');
     await install(['./entry.mjs']);
 
-    // should have created .npmrc for pnpm
-    expect(existsSync(join(tempDir, '.npmrc'))).toBe(true);
+    expect(vi.mocked(execSync)).toHaveBeenCalledWith('pnpm install --frozen-lockfile --node-linker=hoisted', {
+      stdio: 'inherit',
+    });
 
-    // should have called pnpm install
-    expect(vi.mocked(execSync)).toHaveBeenCalledWith('pnpm install --frozen-lockfile', { stdio: 'inherit' });
-
-    // should have run prune (nft was called)
     expect(vi.mocked(nodeFileTrace)).toHaveBeenCalledOnce();
     expect(vi.mocked(nodeFileTrace).mock.calls[0][0]).toEqual(['./entry.mjs']);
   });
