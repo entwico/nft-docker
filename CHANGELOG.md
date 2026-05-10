@@ -1,5 +1,11 @@
 ## [1.0.1](https://github.com/entwico/nft-docker/compare/v1.0.0...v1.0.1) (2026-03-20)
 
+## 1.3.0
+
+### Minor Changes
+
+- 7d3963d: remove the preinstall command; install now passes --node-linker=hoisted to pnpm directly
+
 ## 1.2.0
 
 ### Minor Changes
