@@ -1,5 +1,13 @@
 ## [1.0.1](https://github.com/entwico/nft-docker/compare/v1.0.0...v1.0.1) (2026-03-20)
 
+## 1.3.1
+
+### Patch Changes
+
+- 157e8e4: safer `--rewrite` by keeping cjs modules out of shimming
+- 157e8e4: always strip `@types/*` from `node_modules`
+- 157e8e4: improve recognition of `.fork()` method calls
+
 ## 1.3.0
 
 ### Minor Changes
