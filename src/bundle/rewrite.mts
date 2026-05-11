@@ -48,7 +48,13 @@ export async function rewrite(opts: RewriteOptions): Promise<RewriteResult> {
     entryFileNames: '[name].mjs',
     chunkFileNames: 'chunks/[name]-[hash].mjs',
     sourcemap: opts.sourcemap !== false,
-    minify: opts.minify !== false,
+    minify:
+      opts.minify === false
+        ? false
+        : {
+            mangle: { keepNames: { function: true, class: true } },
+            compress: { keepNames: { function: true, class: true } },
+          },
   });
 
   await bundle.close();
