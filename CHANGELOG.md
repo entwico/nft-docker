@@ -1,5 +1,11 @@
 ## [1.0.1](https://github.com/entwico/nft-docker/compare/v1.0.0...v1.0.1) (2026-03-20)
 
+## 1.3.3
+
+### Patch Changes
+
+- 2e7fe56: preserve class and function names in the rewritten output
+
 ## 1.3.2
 
 ### Patch Changes
