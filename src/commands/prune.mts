@@ -1,4 +1,4 @@
-import { readdir, unlink, rmdir } from 'fs/promises';
+import { readdir, rm, unlink, rmdir } from 'fs/promises';
 import { dirname, join, resolve } from 'path';
 import { nodeFileTrace } from '@vercel/nft';
 import { resolveExternalRoots } from '../bundle/external-roots.mjs';
@@ -31,7 +31,9 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
       console.log('rewriting entrypoints:', entrypoints.join(', '));
       console.log('output dir:           ', outDir);
     } else {
-      console.log(`rewriting ${entrypoints.length} entry(ies) → ${outDir}`);
+      const label = entrypoints.length === 1 ? 'entry' : 'entries';
+
+      console.log(`rewriting ${entrypoints.length} ${label} → ${outDir}`);
     }
 
     const { classification } = await rewrite({
@@ -62,7 +64,9 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
     forceExternal = classification.external;
 
     if (verbose && externalRoots.length > 0) {
-      console.log(`adding ${externalRoots.length} external package root(s) to NFT trace`);
+      const label = externalRoots.length === 1 ? 'root' : 'roots';
+
+      console.log(`adding ${externalRoots.length} external package ${label} to NFT trace`);
     }
 
     if (verbose) console.log('');
@@ -71,7 +75,9 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
   const preserved = await expandGlobs(opts.preserve ?? [], cwd);
 
   if (preserved.length > 0) {
-    console.log(`preserving ${preserved.length} additional file(s) via --preserve`);
+    const label = preserved.length === 1 ? 'file' : 'files';
+
+    console.log(`preserving ${preserved.length} additional ${label} via --preserve`);
   }
 
   const allTraceInputs = [...traceEntries, ...externalRoots, ...preserved];
@@ -190,7 +196,24 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
 
   await walkAndPrune(nmPath);
 
-  const elapsed = ((performance.now() - start) / 1000).toFixed(1);
+  // wipe @types/* packages, isn't always reliably traced (e.g. protobuf)
+  const typesDir = join(nmPath, '@types');
+  let typesDeleted = 0;
 
-  console.log(`deleted ${deleted} files in ${elapsed}s`);
+  try {
+    const typesEntries = await readdir(typesDir);
+
+    typesDeleted = typesEntries.length;
+
+    await rm(typesDir, { recursive: true, force: true });
+  } catch {
+    // no @types dir — fine.
+  }
+
+  const elapsed = ((performance.now() - start) / 1000).toFixed(1);
+  const parts = [`${deleted} files`];
+
+  if (typesDeleted > 0) parts.push(`${typesDeleted} @types ${typesDeleted === 1 ? 'package' : 'packages'}`);
+
+  console.log(`deleted ${parts.join(', ')} in ${elapsed}s`);
 }

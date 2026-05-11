@@ -131,6 +131,75 @@ describe('prune', () => {
     expect(existsSync(join(tempDir, 'node_modules', 'outer', 'node_modules', 'inner', 'package.json'))).toBe(true);
   });
 
+  it('strips `@types/*` packages even when traced', async () => {
+    mkdirSync(join(tempDir, 'node_modules', '@types', 'node'), { recursive: true });
+    mkdirSync(join(tempDir, 'node_modules', '@types', 'react'), { recursive: true });
+    writeFileSync(join(tempDir, 'node_modules', '@types', 'node', 'index.d.ts'), 'declare module "x";');
+    writeFileSync(join(tempDir, 'node_modules', '@types', 'react', 'index.d.ts'), 'declare module "y";');
+    writeFileSync(join(tempDir, 'entry.mjs'), '');
+
+    const { nodeFileTrace } = await import('@vercel/nft');
+
+    // even though NFT happens to include an @types path in tracedSet (some
+    // packages pull them in as runtime `dependencies`), they're pure
+    // TypeScript declarations and must never reach production.
+    vi.mocked(nodeFileTrace).mockResolvedValue({
+      fileList: new Set(['entry.mjs', 'node_modules/@types/node/index.d.ts']),
+      esmFileList: new Set(),
+      reasons: new Map(),
+      warnings: new Set(),
+    });
+
+    const { prune } = await import('../src/commands/prune.mjs');
+
+    await prune(['./entry.mjs']);
+
+    expect(existsSync(join(tempDir, 'node_modules', '@types'))).toBe(false);
+  });
+
+  it('leaves other @scoped packages alone (sweep targets only `@types/`)', async () => {
+    mkdirSync(join(tempDir, 'node_modules', '@scope', 'pkg'), { recursive: true });
+    writeFileSync(join(tempDir, 'node_modules', '@scope', 'pkg', 'index.js'), 'module.exports = 1');
+    writeFileSync(join(tempDir, 'node_modules', '@scope', 'pkg', 'package.json'), '{"name":"@scope/pkg"}');
+    writeFileSync(join(tempDir, 'entry.mjs'), '');
+
+    const { nodeFileTrace } = await import('@vercel/nft');
+
+    vi.mocked(nodeFileTrace).mockResolvedValue({
+      fileList: new Set(['entry.mjs', 'node_modules/@scope/pkg/index.js']),
+      esmFileList: new Set(),
+      reasons: new Map(),
+      warnings: new Set(),
+    });
+
+    const { prune } = await import('../src/commands/prune.mjs');
+
+    await prune(['./entry.mjs']);
+
+    expect(existsSync(join(tempDir, 'node_modules', '@scope', 'pkg', 'index.js'))).toBe(true);
+  });
+
+  it('no-ops when no `@types/` dir exists', async () => {
+    mkdirSync(join(tempDir, 'node_modules', 'pkg'), { recursive: true });
+    writeFileSync(join(tempDir, 'node_modules', 'pkg', 'index.js'), 'module.exports = 1');
+    writeFileSync(join(tempDir, 'entry.mjs'), '');
+
+    const { nodeFileTrace } = await import('@vercel/nft');
+
+    vi.mocked(nodeFileTrace).mockResolvedValue({
+      fileList: new Set(['entry.mjs', 'node_modules/pkg/index.js']),
+      esmFileList: new Set(),
+      reasons: new Map(),
+      warnings: new Set(),
+    });
+
+    const { prune } = await import('../src/commands/prune.mjs');
+
+    await expect(prune(['./entry.mjs'])).resolves.not.toThrow();
+
+    expect(existsSync(join(tempDir, 'node_modules', 'pkg', 'index.js'))).toBe(true);
+  });
+
   it('preserves entire directory tree for force-external packages under --rewrite', async () => {
     mkdirSync(join(tempDir, 'node_modules', 'native-pkg', 'lib', 'helpers'), { recursive: true });
     writeFileSync(join(tempDir, 'node_modules', 'native-pkg', 'package.json'), '{"name":"native-pkg"}');

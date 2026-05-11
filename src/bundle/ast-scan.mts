@@ -6,7 +6,7 @@ import { type DetectReason } from './types.mjs';
 // substring pre-filter — files lacking any of these never get parsed.
 const MARKERS = [
   'new Worker',
-  '.fork(',
+  'child_process',
   'Module.register',
   'new Function',
   'eval(',
@@ -28,11 +28,75 @@ const LOADER_PATCHERS = new Set(['import-in-the-middle', 'require-in-the-middle'
 // spawns a worker thread, typically with a sibling file as the entry.
 const WORKER_SPAWNERS = new Set(['thread-stream', 'piscina', 'workerpool']);
 
+const CHILD_PROCESS_SPECIFIER = /^(?:node:)?child_process$/;
+
 function reasonForSpecifier(name: string): DetectReason | null {
   if (LOADER_PATCHERS.has(name)) return 'ast-loader-patch';
   if (WORKER_SPAWNERS.has(name)) return 'ast-worker';
 
   return null;
+}
+
+interface ChildProcessBindings {
+  // names that, when called as `name(...)`, mean child_process.fork
+  directFork: Set<string>;
+  // names that, when accessed as `name.fork(...)`, mean child_process.fork
+  namespace: Set<string>;
+}
+
+// pre-pass: collect identifiers bound to `child_process` (or any of its members
+// of interest). this lets us distinguish child_process.fork() from the false positives
+function collectChildProcessBindings(ast: any): ChildProcessBindings {
+  const bindings: ChildProcessBindings = { directFork: new Set(), namespace: new Set() };
+
+  simple(ast, {
+    ImportDeclaration(node: any) {
+      const src = node.source?.value;
+
+      if (typeof src !== 'string' || !CHILD_PROCESS_SPECIFIER.test(src)) return;
+
+      for (const spec of node.specifiers ?? []) {
+        if (spec.type === 'ImportSpecifier') {
+          const imported = spec.imported?.name ?? spec.imported?.value;
+
+          if (imported === 'fork') bindings.directFork.add(spec.local.name);
+        } else if (spec.type === 'ImportNamespaceSpecifier' || spec.type === 'ImportDefaultSpecifier') {
+          bindings.namespace.add(spec.local.name);
+        }
+      }
+    },
+
+    VariableDeclarator(node: any) {
+      const init = node.init;
+
+      if (!init || init.type !== 'CallExpression') return;
+      if (init.callee?.type !== 'Identifier' || init.callee.name !== 'require') return;
+
+      const arg = init.arguments?.[0];
+
+      if (arg?.type !== 'Literal' || typeof arg.value !== 'string' || !CHILD_PROCESS_SPECIFIER.test(arg.value)) {
+        return;
+      }
+
+      if (node.id.type === 'Identifier') {
+        bindings.namespace.add(node.id.name);
+      } else if (node.id.type === 'ObjectPattern') {
+        for (const prop of node.id.properties) {
+          if (prop.type !== 'Property') continue;
+
+          const keyName = prop.key?.name ?? prop.key?.value;
+
+          if (keyName !== 'fork') continue;
+
+          const localName = prop.value?.type === 'Identifier' ? prop.value.name : keyName;
+
+          bindings.directFork.add(localName);
+        }
+      }
+    },
+  });
+
+  return bindings;
 }
 
 export function scanFile(path: string): DetectReason[] {
@@ -71,6 +135,7 @@ export function scanFile(path: string): DetectReason[] {
   }
 
   const reasons = new Set<DetectReason>();
+  const cpBindings = collectChildProcessBindings(ast);
 
   simple(ast, {
     NewExpression(node: any) {
@@ -96,7 +161,18 @@ export function scanFile(path: string): DetectReason[] {
 
       if (!callee) return;
 
-      if (callee.type === 'MemberExpression' && callee.property?.name === 'fork') {
+      if (
+        callee.type === 'MemberExpression' &&
+        !callee.computed &&
+        callee.property?.type === 'Identifier' &&
+        callee.property.name === 'fork' &&
+        callee.object?.type === 'Identifier' &&
+        cpBindings.namespace.has(callee.object.name)
+      ) {
+        reasons.add('ast-fork');
+      }
+
+      if (callee.type === 'Identifier' && cpBindings.directFork.has(callee.name)) {
         reasons.add('ast-fork');
       }
 

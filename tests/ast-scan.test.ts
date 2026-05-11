@@ -53,7 +53,7 @@ describe('scanFile', () => {
     expect(scanFile(path)).toContain('ast-worker');
   });
 
-  it('flags child_process.fork(...) as ast-fork', () => {
+  it('flags child_process.fork(...) via default import as ast-fork', () => {
     const path = write(
       'a.js',
       `import cp from 'node:child_process';
@@ -61,6 +61,67 @@ describe('scanFile', () => {
     );
 
     expect(scanFile(path)).toContain('ast-fork');
+  });
+
+  it('flags fork(...) imported by name from child_process as ast-fork', () => {
+    const path = write(
+      'a.js',
+      `import { fork } from 'child_process';
+       fork('./worker.js');`,
+    );
+
+    expect(scanFile(path)).toContain('ast-fork');
+  });
+
+  it('flags fork via CJS namespace require as ast-fork', () => {
+    const path = write(
+      'a.js',
+      `const cp = require('node:child_process');
+       cp.fork('./worker.js');`,
+    );
+
+    expect(scanFile(path)).toContain('ast-fork');
+  });
+
+  it('flags fork via CJS destructuring as ast-fork', () => {
+    const path = write(
+      'a.js',
+      `const { fork } = require('child_process');
+       fork('./worker.js');`,
+    );
+
+    expect(scanFile(path)).toContain('ast-fork');
+  });
+
+  it('flags fork via CJS destructuring with alias as ast-fork', () => {
+    const path = write(
+      'a.js',
+      `const { fork: spawnFork } = require('child_process');
+       spawnFork('./worker.js');`,
+    );
+
+    expect(scanFile(path)).toContain('ast-fork');
+  });
+
+  it('does NOT flag .fork() on an unrelated object', () => {
+    // common false-positive pattern: protobuf builders, immutable-data libs, etc.
+    const path = write(
+      'a.js',
+      `const builder = makeBuilder();
+       builder.fork({ option: 1 });`,
+    );
+
+    expect(scanFile(path)).not.toContain('ast-fork');
+  });
+
+  it('does NOT flag fork() when imported from somewhere other than child_process', () => {
+    const path = write(
+      'a.js',
+      `import { fork } from 'some-fluent-api';
+       fork({ option: 1 });`,
+    );
+
+    expect(scanFile(path)).not.toContain('ast-fork');
   });
 
   it('flags Module.register(...) as ast-module-register', () => {
