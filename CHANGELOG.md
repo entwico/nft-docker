@@ -1,5 +1,11 @@
 # @entwico/bonsai
 
+## 2.0.1
+
+### Patch Changes
+
+- edeb233: correctly resolve the dependency closure under pnpm's isolated (.pnpm) node_modules layout
+
 ## 2.0.0
 
 ### Major Changes
