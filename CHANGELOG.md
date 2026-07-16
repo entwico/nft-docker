@@ -1,5 +1,11 @@
 # @entwico/bonsai
 
+## 2.0.0
+
+### Major Changes
+
+- dfe88d6: renamed from @entwico/nft-docker; entrypoints are now positional (drop `-e`) and rewrite is the default (pass `--no-rewrite` to opt out)
+
 ## 1.3.4
 
 ### Patch Changes
