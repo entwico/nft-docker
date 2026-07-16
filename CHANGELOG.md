@@ -1,5 +1,11 @@
 ## [1.0.1](https://github.com/entwico/nft-docker/compare/v1.0.0...v1.0.1) (2026-03-20)
 
+## 1.3.4
+
+### Patch Changes
+
+- 8c5068c: keep packages that bundled chunks reference only through rolldown's `__require(...)` helper
+
 ## 1.3.3
 
 ### Patch Changes
