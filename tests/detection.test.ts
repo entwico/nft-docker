@@ -1,12 +1,12 @@
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { detectExternals } from '../src/bundle/detection.mjs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { detectExternals } from '../src/bundle/detection';
 
 function trace(opts: { files?: string[]; warnings?: (string | Error)[] }) {
   return {
-    fileList: new Set(opts.files ?? []),
+    fileList: new Set(opts.files),
     esmFileList: new Set<string>(),
     reasons: new Map(),
     warnings: new Set((opts.warnings ?? []).map((w) => (w instanceof Error ? w : new Error(w)))),

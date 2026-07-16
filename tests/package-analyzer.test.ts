@@ -1,8 +1,8 @@
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { PackageAnalyzer } from '../src/bundle/package-analyzer.mjs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { PackageAnalyzer } from '../src/bundle/package-analyzer';
 
 function makeIsExternal(cwd: string): (id: string) => boolean {
   const analyzer = new PackageAnalyzer(cwd);
@@ -154,7 +154,7 @@ describe('rewrite external callback (inline at the rolldown call site)', () => {
     writePkg(
       'modern-esm',
       { type: 'module', main: './index.js', dependencies: { 'some-cjs': '*' } },
-      { 'index.js': "import x from 'some-cjs';\nexport default x;" },
+      { 'index.js': 'import x from \'some-cjs\';\nexport default x;' },
     );
     writePkg('some-cjs', { main: './index.js' }, { 'index.js': 'module.exports = 1;' });
 
@@ -174,7 +174,7 @@ describe('rewrite external callback (inline at the rolldown call site)', () => {
       '@radix/widget',
       { module: './dist/index.mjs', main: './dist/index.js' },
       {
-        'dist/index.mjs': "import * as React from 'react';\nexport const Widget = () => null;",
+        'dist/index.mjs': 'import * as React from \'react\';\nexport const Widget = () => null;',
         'dist/index.js': 'module.exports = {};',
       },
     );
@@ -214,7 +214,7 @@ describe('rewrite external callback (inline at the rolldown call site)', () => {
     writePkg(
       'oidc-provider',
       { type: 'module', main: './lib/index.js', dependencies: { koa: '*' } },
-      { 'lib/index.js': "import Koa from 'koa';\nexport default Koa;" },
+      { 'lib/index.js': 'import Koa from \'koa\';\nexport default Koa;' },
     );
     writePkg(
       'koa',
@@ -237,7 +237,7 @@ describe('rewrite external callback (inline at the rolldown call site)', () => {
       'esm-with-cjs-sibling',
       { type: 'module', main: './index.js' },
       {
-        'index.js': "import x from './native-binding.cjs';\nexport default x;",
+        'index.js': 'import x from \'./native-binding.cjs\';\nexport default x;',
         'native-binding.cjs': 'module.exports = {};',
       },
     );
@@ -252,8 +252,8 @@ describe('rewrite external callback (inline at the rolldown call site)', () => {
       'cycle-pkg',
       { type: 'module', main: './a.js' },
       {
-        'a.js': "import b from './b.js';\nexport default b;",
-        'b.js': "import a from './a.js';\nexport default a;",
+        'a.js': 'import b from \'./b.js\';\nexport default b;',
+        'b.js': 'import a from \'./a.js\';\nexport default a;',
       },
     );
 
@@ -266,7 +266,7 @@ describe('rewrite external callback (inline at the rolldown call site)', () => {
     writePkg(
       'broken',
       { type: 'module', main: './index.js' },
-      { 'index.js': "import x from './does-not-exist.js';\nexport default x;" },
+      { 'index.js': 'import x from \'./does-not-exist.js\';\nexport default x;' },
     );
 
     const isExternal = makeIsExternal(tmp);

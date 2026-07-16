@@ -1,8 +1,8 @@
-import { existsSync } from 'fs';
-import { join } from 'path';
-import { describe, it, expect, beforeAll } from 'vitest';
-import { classify } from '../../src/bundle/classify.mjs';
-import { type Classification } from '../../src/bundle/types.mjs';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { classify } from '../../src/bundle/classify';
+import type { Classification } from '../../src/bundle/types';
 import { writeDebug } from '../util/debug.js';
 
 const ROOT = join(import.meta.dirname, '..', '..', 'samples', 'node-app');

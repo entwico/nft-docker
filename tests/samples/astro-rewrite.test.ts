@@ -1,8 +1,7 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
-import { join } from 'path';
-import { describe, it, expect, beforeAll } from 'vitest';
-import { rewrite } from '../../src/bundle/rewrite.mjs';
-import { type RewriteResult } from '../../src/bundle/rewrite.mjs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { type RewriteResult, rewrite } from '../../src/bundle/rewrite';
 import { writeDebug } from '../util/debug.js';
 
 const ROOT = join(import.meta.dirname, '..', '..', 'samples', 'astro-app');
@@ -20,7 +19,7 @@ function readAllMjsRecursively(dir: string): string {
     if (stat.isDirectory()) {
       combined += readAllMjsRecursively(path);
     } else if (name.endsWith('.mjs')) {
-      combined += readFileSync(path, 'utf-8');
+      combined += readFileSync(path, 'utf8');
       combined += '\n';
     }
   }
@@ -90,7 +89,7 @@ describe('rewrite samples/astro-app', () => {
     for (const file of filesInOutput) {
       if (!file.endsWith('.mjs') && !file.endsWith('.js') && !file.endsWith('.cjs')) continue;
 
-      const content = readFileSync(file, 'utf-8');
+      const content = readFileSync(file, 'utf8');
       let match: RegExpExecArray | null;
 
       while ((match = urlReferencePattern.exec(content)) !== null) {

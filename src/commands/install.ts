@@ -1,6 +1,6 @@
-import { execSync } from 'child_process';
-import { type PmName, detectPm } from '../utils/detect-pm.mjs';
-import { prune, type PruneOptions } from './prune.mjs';
+import { execSync } from 'node:child_process';
+import { type PmName, detectPm } from '../utils/detect-pm';
+import { type PruneOptions, prune } from './prune';
 
 const installCommands: Record<PmName, string> = {
   pnpm: 'pnpm install --frozen-lockfile --node-linker=hoisted',

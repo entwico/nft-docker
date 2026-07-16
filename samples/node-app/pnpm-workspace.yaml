@@ -1,0 +1,2 @@
+# standalone sample: its own workspace root so the repo-root pnpm-workspace.yaml
+# doesn't capture it. no native dependencies here, so no build allowlist is needed.

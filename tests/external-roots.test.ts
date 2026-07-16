@@ -1,8 +1,8 @@
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { resolveExternalRoots } from '../src/bundle/external-roots.mjs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { resolveExternalRoots } from '../src/bundle/external-roots';
 
 describe('resolveExternalRoots', () => {
   let tmp: string;

@@ -3,6 +3,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { sortByString } from '../../src/utils/sort';
 
 export interface NodeRuntime {
   name: string;
@@ -33,14 +34,15 @@ export function childEnv(extra: Record<string, string> = {}): Record<string, str
 // is present, offer one runtime per node-versions/<v> pin (skipping any not installed).
 export function discoverRuntimes(): NodeRuntime[] {
   const protoShim = join(homedir(), '.proto', 'shims', 'node');
-  const versionsDir = join(e2eRoot, 'node-versions');
 
   if (process.env.CI || !existsSync(protoShim)) {
     return [{ name: `node ${process.versions.node} (ambient)`, version: null, available: true }];
   }
 
+  const versionsDir = join(e2eRoot, 'node-versions');
+
   return readdirSync(versionsDir)
-    .sort((a, b) => a.localeCompare(b))
+    .toSorted(sortByString)
     .map((version) => {
       try {
         const resolved = execFileSync(protoShim, ['--version'], {

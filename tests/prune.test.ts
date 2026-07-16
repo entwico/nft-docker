@@ -1,13 +1,13 @@
-import { mkdtempSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@vercel/nft', () => ({
   nodeFileTrace: vi.fn(),
 }));
 
-vi.mock('../src/bundle/rewrite.mjs', () => ({
+vi.mock('../src/bundle/rewrite', () => ({
   rewrite: vi.fn(),
 }));
 
@@ -27,7 +27,7 @@ describe('prune', () => {
   });
 
   it('throws when no entrypoints given', async () => {
-    const { prune } = await import('../src/commands/prune.mjs');
+    const { prune } = await import('../src/commands/prune');
 
     await expect(prune([])).rejects.toThrow('usage: bonsai prune <entrypoint>...');
   });
@@ -49,7 +49,7 @@ describe('prune', () => {
       warnings: new Set(),
     });
 
-    const { prune } = await import('../src/commands/prune.mjs');
+    const { prune } = await import('../src/commands/prune');
 
     await prune(['./entry.mjs']);
 
@@ -73,7 +73,7 @@ describe('prune', () => {
       warnings: new Set(),
     });
 
-    const { prune } = await import('../src/commands/prune.mjs');
+    const { prune } = await import('../src/commands/prune');
     await prune(['./entry.mjs']);
 
     expect(existsSync(join(tempDir, 'node_modules', '@scope', 'pkg', 'index.js'))).toBe(true);
@@ -98,7 +98,7 @@ describe('prune', () => {
       warnings: new Set(),
     });
 
-    const { prune } = await import('../src/commands/prune.mjs');
+    const { prune } = await import('../src/commands/prune');
 
     await prune(['./entry.mjs']);
 
@@ -123,7 +123,7 @@ describe('prune', () => {
       warnings: new Set(),
     });
 
-    const { prune } = await import('../src/commands/prune.mjs');
+    const { prune } = await import('../src/commands/prune');
 
     await prune(['./entry.mjs']);
 
@@ -150,7 +150,7 @@ describe('prune', () => {
       warnings: new Set(),
     });
 
-    const { prune } = await import('../src/commands/prune.mjs');
+    const { prune } = await import('../src/commands/prune');
 
     await prune(['./entry.mjs']);
 
@@ -172,7 +172,7 @@ describe('prune', () => {
       warnings: new Set(),
     });
 
-    const { prune } = await import('../src/commands/prune.mjs');
+    const { prune } = await import('../src/commands/prune');
 
     await prune(['./entry.mjs']);
 
@@ -193,7 +193,7 @@ describe('prune', () => {
       warnings: new Set(),
     });
 
-    const { prune } = await import('../src/commands/prune.mjs');
+    const { prune } = await import('../src/commands/prune');
 
     await expect(prune(['./entry.mjs'])).resolves.not.toThrow();
 
@@ -230,7 +230,7 @@ describe('prune', () => {
         warnings: new Set(),
       });
 
-    const { prune } = await import('../src/commands/prune.mjs');
+    const { prune } = await import('../src/commands/prune');
 
     await prune(['./dist/entry.mjs']);
 
@@ -249,7 +249,7 @@ describe('prune', () => {
     mkdirSync(join(tempDir, 'dist', 'server'), { recursive: true });
     writeFileSync(join(tempDir, 'dist', 'server', 'main.mjs'), '');
 
-    const { rewrite } = await import('../src/bundle/rewrite.mjs');
+    const { rewrite } = await import('../src/bundle/rewrite');
 
     vi.mocked(rewrite).mockResolvedValue({
       classification: {
@@ -271,7 +271,7 @@ describe('prune', () => {
       warnings: new Set(),
     });
 
-    const { prune } = await import('../src/commands/prune.mjs');
+    const { prune } = await import('../src/commands/prune');
 
     await prune(['./dist/server/main.mjs'], { rewrite: true });
 

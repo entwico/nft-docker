@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { parseArgs } from 'util';
-import { install } from './commands/install.mjs';
-import { prune } from './commands/prune.mjs';
+import { parseArgs } from 'node:util';
+import { install } from './commands/install';
+import { prune } from './commands/prune';
 
 const [command, ...rest] = process.argv.slice(2);
 
@@ -19,11 +19,11 @@ const commands: Record<string, (entrypoints: string[], opts: CommandOptions) => 
   prune,
 };
 
-if (!command || !commands[command]) {
+if (!command || !Object.hasOwn(commands, command)) {
   console.error(
     'usage: bonsai <install|prune> <entrypoint>... ' +
-      '[-p|--preserve <glob>]... ' +
-      '[--no-rewrite] [--no-minify] [--no-sourcemap] [-v|--verbose]',
+    '[-p|--preserve <glob>]... ' +
+    '[--no-rewrite] [--no-minify] [--no-sourcemap] [-v|--verbose]',
   );
   process.exit(1);
 }
@@ -49,7 +49,7 @@ try {
     sourcemap: !(values['no-sourcemap'] ?? false),
     verbose: values.verbose ?? false,
   });
-} catch (err) {
-  console.error((err as Error).message);
+} catch (error) {
+  console.error((error as Error).message);
   process.exit(1);
 }

@@ -1,8 +1,9 @@
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { expandGlobs } from '../src/utils/expand-globs.mjs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { expandGlobs } from '../src/utils/expand-globs';
+import { sortByString } from '../src/utils/sort';
 
 describe('expandGlobs', () => {
   let tmp: string;
@@ -34,7 +35,7 @@ describe('expandGlobs', () => {
 
     const out = await expandGlobs(['*.txt'], tmp);
 
-    expect(out.sort()).toEqual([join(tmp, 'a.txt'), join(tmp, 'b.txt')]);
+    expect(out.toSorted(sortByString)).toEqual([join(tmp, 'a.txt'), join(tmp, 'b.txt')]);
   });
 
   it('expands a recursive double-star glob', async () => {
@@ -54,7 +55,7 @@ describe('expandGlobs', () => {
 
     const out = await expandGlobs(['*.txt', '*.md'], tmp);
 
-    expect(out.sort()).toEqual([join(tmp, 'a.txt'), join(tmp, 'b.md')]);
+    expect(out.toSorted(sortByString)).toEqual([join(tmp, 'a.txt'), join(tmp, 'b.md')]);
   });
 
   it('throws on a pattern that matches nothing', async () => {

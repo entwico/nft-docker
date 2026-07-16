@@ -1,6 +1,6 @@
-import { existsSync } from 'fs';
-import { createRequire, isBuiltin } from 'module';
-import { isAbsolute, join } from 'path';
+import { existsSync } from 'node:fs';
+import { createRequire, isBuiltin } from 'node:module';
+import { isAbsolute, join } from 'node:path';
 
 // rolldown wraps CJS requires in helpers (__require, __toESM) that NFT
 // doesn't recognize as import edges, so externals from the bundled

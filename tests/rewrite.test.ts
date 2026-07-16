@@ -1,9 +1,9 @@
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
-import { pathToFileURL } from 'url';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { rewrite } from '../src/bundle/rewrite.mjs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { rewrite } from '../src/bundle/rewrite';
 
 describe('rewrite preserves Function/Class .name through minification', () => {
   let tmp: string;

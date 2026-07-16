@@ -1,7 +1,7 @@
-import { readFileSync } from 'fs';
+import { readFileSync } from 'node:fs';
 import { Parser } from 'acorn';
 import { simple } from 'acorn-walk';
-import { type DetectReason } from './types.mjs';
+import type { DetectReason } from './types';
 
 // substring pre-filter — files lacking any of these never get parsed.
 const MARKERS = [
@@ -55,7 +55,9 @@ function collectChildProcessBindings(ast: any): ChildProcessBindings {
 
       if (typeof src !== 'string' || !CHILD_PROCESS_SPECIFIER.test(src)) return;
 
-      for (const spec of node.specifiers ?? []) {
+      const specifiers = node.specifiers ?? [];
+
+      for (const spec of specifiers) {
         if (spec.type === 'ImportSpecifier') {
           const imported = spec.imported?.name ?? spec.imported?.value;
 
@@ -105,7 +107,7 @@ export function scanBundleExternals(path: string): string[] {
   let source: string;
 
   try {
-    source = readFileSync(path, 'utf-8');
+    source = readFileSync(path, 'utf8');
   } catch {
     return [];
   }
@@ -159,12 +161,12 @@ export function scanFile(path: string): DetectReason[] {
   let source: string;
 
   try {
-    source = readFileSync(path, 'utf-8');
+    source = readFileSync(path, 'utf8');
   } catch {
     return [];
   }
 
-  if (!MARKERS.some((m) => source.includes(m))) return [];
+  if (MARKERS.every((m) => !source.includes(m))) return [];
 
   let ast;
 

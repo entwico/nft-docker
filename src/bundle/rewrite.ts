@@ -1,8 +1,8 @@
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 import { rolldown } from 'rolldown';
-import { classify } from './classify.mjs';
-import { PackageAnalyzer } from './package-analyzer.mjs';
-import { type Classification } from './types.mjs';
+import { classify } from './classify';
+import { PackageAnalyzer } from './package-analyzer';
+import type { Classification } from './types';
 
 export interface RewriteOptions {
   entrypoints: string[];

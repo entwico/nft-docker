@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, statSync } from 'fs';
-import { dirname, join, resolve } from 'path';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { Parser } from 'acorn';
 
 export class PackageAnalyzer {
@@ -10,37 +10,6 @@ export class PackageAnalyzer {
 
   constructor(cwd: string) {
     this._cwd = cwd;
-  }
-
-  isSafeToBundle(specifier: string): boolean {
-    const pkgRoot = this._packageRoot(specifier);
-    const cached = this._verdict.get(pkgRoot);
-
-    if (cached !== undefined) return !cached;
-
-    const pkgJson = this._readPackageJson(pkgRoot);
-
-    if (!pkgJson) {
-      this._verdict.set(pkgRoot, true);
-
-      return false;
-    }
-
-    const pkgJsonPath = this._findPackageJson(pkgRoot)!;
-    const pkgDir = dirname(pkgJsonPath);
-    const entry = this._findEsmEntry(pkgDir, pkgJson);
-
-    if (!entry) {
-      this._verdict.set(pkgRoot, true);
-
-      return false;
-    }
-
-    const safe = this._isFileEsmSafe(entry, pkgJson.type === 'module', new Set());
-
-    this._verdict.set(pkgRoot, !safe);
-
-    return safe;
   }
 
   private _packageRoot(specifier: string): string {
@@ -63,7 +32,7 @@ export class PackageAnalyzer {
     }
 
     try {
-      const json = JSON.parse(readFileSync(path, 'utf-8'));
+      const json = JSON.parse(readFileSync(path, 'utf8'));
 
       this._pkgJsonCache.set(pkgRoot, json);
 
@@ -155,7 +124,7 @@ export class PackageAnalyzer {
     let source: string;
 
     try {
-      source = readFileSync(filePath, 'utf-8');
+      source = readFileSync(filePath, 'utf8');
     } catch {
       this._fileSafeCache.set(cacheKey, false);
 
@@ -193,11 +162,7 @@ export class PackageAnalyzer {
     for (const node of ast.body) {
       let spec: string | undefined;
 
-      if (
-        node.type === 'ImportDeclaration' ||
-        node.type === 'ExportAllDeclaration' ||
-        node.type === 'ExportNamedDeclaration'
-      ) {
+      if (['ImportDeclaration', 'ExportAllDeclaration', 'ExportNamedDeclaration'].includes(node.type)) {
         spec = node.source?.value;
       }
 
@@ -247,5 +212,36 @@ export class PackageAnalyzer {
     }
 
     return null;
+  }
+
+  isSafeToBundle(specifier: string): boolean {
+    const pkgRoot = this._packageRoot(specifier);
+    const cached = this._verdict.get(pkgRoot);
+
+    if (cached !== undefined) return !cached;
+
+    const pkgJson = this._readPackageJson(pkgRoot);
+
+    if (!pkgJson) {
+      this._verdict.set(pkgRoot, true);
+
+      return false;
+    }
+
+    const pkgJsonPath = this._findPackageJson(pkgRoot)!;
+    const pkgDir = dirname(pkgJsonPath);
+    const entry = this._findEsmEntry(pkgDir, pkgJson);
+
+    if (!entry) {
+      this._verdict.set(pkgRoot, true);
+
+      return false;
+    }
+
+    const safe = this._isFileEsmSafe(entry, pkgJson.type === 'module', new Set());
+
+    this._verdict.set(pkgRoot, !safe);
+
+    return safe;
   }
 }

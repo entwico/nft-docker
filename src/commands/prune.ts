@@ -1,11 +1,13 @@
-import { readdir, rm, unlink, rmdir } from 'fs/promises';
-import { dirname, join, resolve } from 'path';
+import { readdir, rm, rmdir, unlink } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 import { nodeFileTrace } from '@vercel/nft';
-import { expandClosure } from '../bundle/closure.mjs';
-import { detectBundleExternals } from '../bundle/detection.mjs';
-import { resolveExternalRoots } from '../bundle/external-roots.mjs';
-import { rewrite } from '../bundle/rewrite.mjs';
-import { expandGlobs } from '../utils/expand-globs.mjs';
+import { expandClosure } from '../bundle/closure';
+import { detectBundleExternals } from '../bundle/detection';
+import { resolveExternalRoots } from '../bundle/external-roots';
+import { indexTracedPackages } from '../bundle/package-utils';
+import { rewrite } from '../bundle/rewrite';
+import { expandGlobs } from '../utils/expand-globs';
+import { sortByString } from '../utils/sort';
 
 export interface PruneOptions {
   rewrite?: boolean;
@@ -51,7 +53,7 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
     if (verbose) {
       console.log(`\nforce-external packages (${externalCount}):`);
 
-      for (const pkg of [...classification.external].sort()) {
+      for (const pkg of [...classification.external].toSorted(sortByString)) {
         const rs = classification.reasons.get(pkg) ?? [];
         const formatted = rs.map((r) => (typeof r === 'string' ? r : `via ${r.reachableFrom}`)).join(', ');
 
@@ -96,7 +98,7 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
     const bundlePackages = detectBundleExternals(result, cwd);
 
     if (bundlePackages.size > 0) {
-      const { external } = expandClosure(bundlePackages, new Map(), cwd);
+      const { external } = expandClosure(bundlePackages, new Map(), cwd, indexTracedPackages(result.fileList, cwd));
       const roots = resolveExternalRoots(external, cwd);
 
       if (roots.length > 0) {
@@ -113,7 +115,7 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
       console.log(`recovered ${external.size} bundled __require ${label}`);
 
       if (verbose) {
-        for (const pkg of [...external].sort()) console.log(`  ${pkg}`);
+        for (const pkg of [...external].toSorted(sortByString)) console.log(`  ${pkg}`);
       }
     }
   }
@@ -131,8 +133,9 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
   }
 
   // node's resolver needs package.json for every enclosing package; NFT doesn't always emit it.
-  for (const f of [...tracedSet]) {
-    const segments = f.split('/');
+  const enclosingPackageJsons = (file: string): string[] => {
+    const segments = file.split('/');
+    const paths: string[] = [];
 
     for (let i = 0; i < segments.length - 1; i++) {
       if (segments[i] !== 'node_modules') continue;
@@ -141,13 +144,20 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
 
       if (!next || next.startsWith('.')) continue;
 
-      const pkgEnd = next.startsWith('@') ? i + 2 : i + 1;
+      const pkgEnd = i + (next.startsWith('@') ? 2 : 1);
 
       if (pkgEnd >= segments.length) continue;
 
-      tracedSet.add(`${segments.slice(0, pkgEnd + 1).join('/')}/package.json`);
+      paths.push(`${segments.slice(0, pkgEnd + 1).join('/')}/package.json`);
     }
-  }
+
+    return paths;
+  };
+
+  const derivedPackageJsons: string[] = [];
+
+  for (const f of tracedSet) derivedPackageJsons.push(...enclosingPackageJsons(f));
+  for (const p of derivedPackageJsons) tracedSet.add(p);
 
   // force-external packages have untraceable codepaths by definition; preserve them whole.
   const keepRoots = new Set<string>();
@@ -164,7 +174,7 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
     if (warningCount > 0) console.log('NFT warnings:', warningCount);
 
     console.log('\npackages:');
-    [...packages].sort().forEach((p) => console.log(' ', p));
+    [...packages].toSorted(sortByString).forEach((p) => console.log(' ', p));
 
     console.log('\npruning non-traced files...');
   } else {

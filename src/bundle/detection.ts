@@ -1,9 +1,9 @@
-import { isBuiltin } from 'module';
-import { join } from 'path';
-import { type NodeFileTraceResult } from '@vercel/nft';
-import { scanBundleExternals, scanFile } from './ast-scan.mjs';
-import { packageExists, packageNameFromSpecifier, packageOfFile } from './package-utils.mjs';
-import { type DetectReason } from './types.mjs';
+import { isBuiltin } from 'node:module';
+import { join } from 'node:path';
+import type { NodeFileTraceResult } from '@vercel/nft';
+import { scanBundleExternals, scanFile } from './ast-scan';
+import { packageExists, packageNameFromSpecifier, packageOfFile } from './package-utils';
+import type { DetectReason } from './types';
 
 export interface Detection {
   packages: Set<string>;
@@ -27,11 +27,13 @@ export function detectExternals(trace: NodeFileTraceResult, cwd: string): Detect
   }
 
   for (const file of trace.fileList) {
-    if (file.endsWith('.node')) {
-      const pkg = packageOfFile(file);
-
-      if (pkg) add(pkg, 'native-bindings');
+    if (!file.endsWith('.node')) {
+      continue;
     }
+
+    const pkg = packageOfFile(file);
+
+    if (pkg) add(pkg, 'native-bindings');
   }
 
   for (const w of trace.warnings) {
@@ -76,18 +78,27 @@ export function detectBundleExternals(trace: NodeFileTraceResult, cwd: string): 
     for (const spec of scanBundleExternals(fullPath)) {
       const pkg = packageNameFromSpecifier(spec);
 
-      if (!pkg || isBuiltin(pkg)) continue;
-      if (!packageExists(cwd, pkg)) continue;
-
-      packages.add(pkg);
+      if (pkg && !isBuiltin(pkg) && packageExists(cwd, pkg)) {
+        packages.add(pkg);
+      }
     }
   }
 
   return packages;
 }
 
+// pnpm's symlink layout puts files under node_modules/.pnpm/<pkg>@<ver>/node_modules/<pkg>/...
+// so a naive first-match grabs `.pnpm`; iterate and pick the last non-dot segment, like packageOfFile.
 function packageOfWarningMessage(msg: string): string | null {
-  const m = msg.match(/node_modules\/(@[^/]+\/[^/]+|[^/]+)/);
+  let last: string | null = null;
 
-  return m ? m[1] : null;
+  for (const m of msg.matchAll(/node_modules\/(@[^/]+\/[^/]+|[^/]+)/g)) {
+    const name = m[1];
+
+    if (name.startsWith('.')) continue;
+
+    last = name;
+  }
+
+  return last;
 }

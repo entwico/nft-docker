@@ -1,0 +1,8 @@
+minimumReleaseAge: 1440
+
+minimumReleaseAgeExclude:
+  - '@entwico/*'
+
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true

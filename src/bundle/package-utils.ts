@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const PKG_RE = /node_modules\/(@[^/]+\/[^/]+|[^/]+)/g;
 
@@ -44,6 +44,29 @@ export function packageExists(cwd: string, pkg: string): boolean {
   return existsSync(packageJsonPath(cwd, pkg));
 }
 
+// map every package in an NFT trace to its real on-disk directory
+export function indexTracedPackages(fileList: Iterable<string>, cwd: string): Map<string, string> {
+  const dirs = new Map<string, string>();
+
+  for (const file of fileList) {
+    let match: RegExpMatchArray | null = null;
+
+    for (const m of file.matchAll(/node_modules\/(@[^/]+\/[^/]+|[^/]+)/g)) {
+      if (!m[1].startsWith('.')) match = m;
+    }
+
+    if (!match || match.index === undefined) continue;
+
+    const name = match[1];
+    const dir = join(cwd, file.slice(0, match.index + match[0].length));
+    const existing = dirs.get(name);
+
+    if (!existing || dir.length < existing.length) dirs.set(name, dir);
+  }
+
+  return dirs;
+}
+
 export interface PackageJson {
   name?: string;
   dependencies?: Record<string, string>;
@@ -51,10 +74,11 @@ export interface PackageJson {
   peerDependencies?: Record<string, string>;
 }
 
-export function readPackageJson(cwd: string, pkg: string): PackageJson | null {
-  const path = packageJsonPath(cwd, pkg);
+export function readPackageJson(cwd: string, pkg: string, packageDirs?: Map<string, string>): PackageJson | null {
+  const dir = packageDirs?.get(pkg);
+  const path = dir ? join(dir, 'package.json') : packageJsonPath(cwd, pkg);
 
   if (!existsSync(path)) return null;
 
-  return JSON.parse(readFileSync(path, 'utf-8')) as PackageJson;
+  return JSON.parse(readFileSync(path, 'utf8')) as PackageJson;
 }

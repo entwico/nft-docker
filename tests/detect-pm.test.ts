@@ -1,8 +1,8 @@
-import { mkdtempSync, writeFileSync, rmSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { detectPm } from '../src/utils/detect-pm.mjs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { detectPm } from '../src/utils/detect-pm';
 
 describe('detectPm', () => {
   let tempDir: string;

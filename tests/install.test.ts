@@ -1,8 +1,8 @@
-import { execSync } from 'child_process';
-import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { execSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('child_process', () => ({
   execSync: vi.fn(),
@@ -28,7 +28,7 @@ describe('install', () => {
   });
 
   it('throws when no entrypoints given', async () => {
-    const { install } = await import('../src/commands/install.mjs');
+    const { install } = await import('../src/commands/install');
 
     await expect(install([])).rejects.toThrow('usage: bonsai install <entrypoint>...');
   });
@@ -47,7 +47,7 @@ describe('install', () => {
       warnings: new Set(),
     });
 
-    const { install } = await import('../src/commands/install.mjs');
+    const { install } = await import('../src/commands/install');
     await install(['./entry.mjs']);
 
     expect(vi.mocked(execSync)).toHaveBeenCalledWith('pnpm install --frozen-lockfile --node-linker=hoisted', {
@@ -71,7 +71,7 @@ describe('install', () => {
       warnings: new Set(),
     });
 
-    const { install } = await import('../src/commands/install.mjs');
+    const { install } = await import('../src/commands/install');
     await install(['./entry.mjs']);
 
     expect(vi.mocked(execSync)).toHaveBeenCalledWith('npm ci', { stdio: 'inherit' });

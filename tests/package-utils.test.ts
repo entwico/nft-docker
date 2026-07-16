@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { packageNameFromSpecifier, packageOfFile } from '../src/bundle/package-utils.mjs';
+import { describe, expect, it } from 'vitest';
+import { packageNameFromSpecifier, packageOfFile } from '../src/bundle/package-utils';
 
 describe('packageOfFile', () => {
   it('extracts plain package name from hoisted layout', () => {

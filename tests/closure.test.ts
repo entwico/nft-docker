@@ -1,9 +1,10 @@
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { expandClosure } from '../src/bundle/closure.mjs';
-import { type DetectReason } from '../src/bundle/types.mjs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { expandClosure } from '../src/bundle/closure';
+import type { DetectReason } from '../src/bundle/types';
+import { sortByString } from '../src/utils/sort';
 
 function writePkg(cwd: string, name: string, json: object) {
   const dir = join(cwd, 'node_modules', name);
@@ -32,7 +33,7 @@ describe('expandClosure', () => {
       tmp,
     );
 
-    expect([...result.external].sort()).toEqual(['sharp']);
+    expect([...result.external].toSorted(sortByString)).toEqual(['sharp']);
     expect(result.reasons.get('sharp')).toEqual(['native-bindings']);
   });
 
@@ -44,7 +45,7 @@ describe('expandClosure', () => {
 
     const result = expandClosure(new Set(['pino']), new Map<string, DetectReason[]>([['pino', ['nft-warning']]]), tmp);
 
-    expect([...result.external].sort()).toEqual(['pino', 'real-require', 'sonic-boom', 'thread-stream']);
+    expect([...result.external].toSorted(sortByString)).toEqual(['pino', 'real-require', 'sonic-boom', 'thread-stream']);
   });
 
   it('records reachableFrom reasons for transitively-pulled packages', () => {
@@ -84,7 +85,7 @@ describe('expandClosure', () => {
 
     const result = expandClosure(new Set(['a']), new Map<string, DetectReason[]>([['a', ['nft-warning']]]), tmp);
 
-    expect([...result.external].sort()).toEqual(['a', 'b']);
+    expect([...result.external].toSorted(sortByString)).toEqual(['a', 'b']);
   });
 
   it('still externalizes deps that are not installed (runtime resolver will fail loudly, beats silent inline)', () => {
@@ -92,7 +93,7 @@ describe('expandClosure', () => {
 
     const result = expandClosure(new Set(['foo']), new Map<string, DetectReason[]>([['foo', ['nft-warning']]]), tmp);
 
-    expect([...result.external].sort()).toEqual(['foo', 'never-installed']);
+    expect([...result.external].toSorted(sortByString)).toEqual(['foo', 'never-installed']);
   });
 
   it('handles scoped package names', () => {
@@ -105,6 +106,6 @@ describe('expandClosure', () => {
       tmp,
     );
 
-    expect([...result.external].sort()).toEqual(['@otel/api', '@otel/core']);
+    expect([...result.external].toSorted(sortByString)).toEqual(['@otel/api', '@otel/core']);
   });
 });

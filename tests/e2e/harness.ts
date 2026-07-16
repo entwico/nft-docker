@@ -1,10 +1,10 @@
 import { execFileSync, spawn } from 'node:child_process';
-import { cpSync, mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { childEnv, type NodeRuntime } from './runtimes.js';
+import { type NodeRuntime, childEnv } from './runtimes.js';
 
 export type Pm = 'pnpm' | 'npm';
 
@@ -113,7 +113,7 @@ function httpGet(port: number, path: string): Promise<{ status: number; body: st
 
     let raw = '';
 
-    req.setEncoding('utf-8');
+    req.setEncoding('utf8');
     req.on('data', (chunk) => (raw += chunk));
     req.on('end', () => {
       const status = Number(raw.match(/^HTTP\/1\.1 (\d+)/)?.[1] ?? 0);

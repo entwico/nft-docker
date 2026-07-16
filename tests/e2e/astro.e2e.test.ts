@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { bootAndProbe, installBuildPrune, prepareSample, type Pm, type ProbeResult } from './harness.js';
+import { type Pm, type ProbeResult, bootAndProbe, installBuildPrune, prepareSample } from './harness.js';
 import { discoverRuntimes } from './runtimes.js';
 
 const SETUP_TIMEOUT = 600_000;
