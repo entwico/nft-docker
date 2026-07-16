@@ -7,7 +7,8 @@ export type DetectReason =
   | 'ast-dyn-require'
   | 'ast-dyn-import'
   | 'ast-module-register'
-  | 'ast-loader-patch';
+  | 'ast-loader-patch'
+  | 'bundled-external';
 
 export type ExternalReason = DetectReason | { reachableFrom: string };
 

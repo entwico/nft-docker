@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { scanFile } from '../src/bundle/ast-scan.mjs';
+import { scanBundleExternals, scanFile } from '../src/bundle/ast-scan.mjs';
 
 describe('scanFile', () => {
   let tmp: string;
@@ -238,5 +238,83 @@ describe('scanFile', () => {
     expect(reasons).toContain('ast-worker');
     expect(reasons).toContain('ast-loader-patch');
     expect(reasons).toContain('ast-eval');
+  });
+});
+
+describe('scanBundleExternals', () => {
+  let tmp: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'bundle-externals-test-'));
+  });
+
+  afterEach(() => {
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  function write(name: string, src: string): string {
+    const path = join(tmp, name);
+
+    writeFileSync(path, src);
+
+    return path;
+  }
+
+  it('recovers a specifier from rolldown __require(...)', () => {
+    const path = write('chunk.mjs', `const otlp = __require("@opentelemetry/exporter-trace-otlp-proto");`);
+
+    expect(scanBundleExternals(path)).toEqual(['@opentelemetry/exporter-trace-otlp-proto']);
+  });
+
+  it('recovers a specifier from a plain require(...) call', () => {
+    const path = write('chunk.cjs', `const lodash = require('lodash');`);
+
+    expect(scanBundleExternals(path)).toEqual(['lodash']);
+  });
+
+  it('recovers a __require nested inside __toESM(...)', () => {
+    const path = write('chunk.mjs', `const mod = __toESM(__require("some-pkg"), 1);`);
+
+    expect(scanBundleExternals(path)).toEqual(['some-pkg']);
+  });
+
+  it('returns subpath specifiers verbatim', () => {
+    const path = write('chunk.mjs', `__require("pkg/sub/deep.js");`);
+
+    expect(scanBundleExternals(path)).toEqual(['pkg/sub/deep.js']);
+  });
+
+  it('deduplicates repeated specifiers', () => {
+    const path = write('chunk.mjs', `__require("pkg"); __require("pkg");`);
+
+    expect(scanBundleExternals(path)).toEqual(['pkg']);
+  });
+
+  it('ignores non-literal require arguments', () => {
+    const path = write('chunk.cjs', `const name = process.env.X; require(name);`);
+
+    expect(scanBundleExternals(path)).toEqual([]);
+  });
+
+  it('does not treat static import/export as require specifiers', () => {
+    const path = write('chunk.mjs', `import x from 'pino'; export { y } from 'sharp';`);
+
+    expect(scanBundleExternals(path)).toEqual([]);
+  });
+
+  it('returns empty when the file has no require call at all', () => {
+    const path = write('chunk.mjs', `export const x = 1;`);
+
+    expect(scanBundleExternals(path)).toEqual([]);
+  });
+
+  it('returns empty for missing files', () => {
+    expect(scanBundleExternals(join(tmp, 'nope.mjs'))).toEqual([]);
+  });
+
+  it('survives parse errors gracefully', () => {
+    const path = write('chunk.mjs', `__require("pkg"); this is not valid {{{`);
+
+    expect(scanBundleExternals(path)).toEqual([]);
   });
 });

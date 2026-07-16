@@ -1,6 +1,8 @@
 import { readdir, rm, unlink, rmdir } from 'fs/promises';
 import { dirname, join, resolve } from 'path';
 import { nodeFileTrace } from '@vercel/nft';
+import { expandClosure } from '../bundle/closure.mjs';
+import { detectBundleExternals } from '../bundle/detection.mjs';
 import { resolveExternalRoots } from '../bundle/external-roots.mjs';
 import { rewrite } from '../bundle/rewrite.mjs';
 import { expandGlobs } from '../utils/expand-globs.mjs';
@@ -87,6 +89,34 @@ export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
   }
 
   const result = await nodeFileTrace(allTraceInputs, { base: cwd });
+
+  // rewrite mode already recovered __require externals via classify. without it, scan the
+  // bundled chunks here, trace their closure, and force-preserve them.
+  if (!opts.rewrite) {
+    const bundlePackages = detectBundleExternals(result, cwd);
+
+    if (bundlePackages.size > 0) {
+      const { external } = expandClosure(bundlePackages, new Map(), cwd);
+      const roots = resolveExternalRoots(external, cwd);
+
+      if (roots.length > 0) {
+        const supplemental = await nodeFileTrace(roots, { base: cwd });
+
+        for (const f of supplemental.fileList) result.fileList.add(f);
+        for (const w of supplemental.warnings) result.warnings.add(w);
+      }
+
+      for (const pkg of external) forceExternal.add(pkg);
+
+      const label = external.size === 1 ? 'external' : 'externals';
+
+      console.log(`recovered ${external.size} bundled __require ${label}`);
+
+      if (verbose) {
+        for (const pkg of [...external].sort()) console.log(`  ${pkg}`);
+      }
+    }
+  }
 
   const tracedSet = new Set(
     [...result.fileList].filter((f) => f.startsWith('node_modules/') || f.includes('/node_modules/')),

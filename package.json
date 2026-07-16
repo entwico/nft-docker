@@ -16,9 +16,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "pnpm test:unit && pnpm test:sample:astro && pnpm test:sample:node",
-    "test:unit": "vitest run --exclude='**/tests/samples/**'",
+    "test:unit": "vitest run --exclude='**/tests/samples/**' --exclude='**/tests/e2e/**'",
     "test:sample:astro": "pnpm -C samples/astro-app install && pnpm -C samples/astro-app build && vitest run tests/samples/astro.test.ts tests/samples/astro-rewrite.test.ts",
     "test:sample:node": "pnpm -C samples/node-app install && pnpm -C samples/node-app build && vitest run tests/samples/node.test.ts",
+    "test:e2e": "pnpm build && vitest run tests/e2e",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

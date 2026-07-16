@@ -99,6 +99,62 @@ function collectChildProcessBindings(ast: any): ChildProcessBindings {
   return bindings;
 }
 
+// bare specifiers a bundled chunk pulls in via require()/__require(). rolldown inlines
+// CJS requires as __require(...) helper calls that NFT doesn't treat as import edges.
+export function scanBundleExternals(path: string): string[] {
+  let source: string;
+
+  try {
+    source = readFileSync(path, 'utf-8');
+  } catch {
+    return [];
+  }
+
+  // `require(` is a substring of `__require(`, so this pre-filter covers both.
+  if (!source.includes('require(')) return [];
+
+  let ast;
+
+  try {
+    ast = Parser.parse(source, {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      allowReturnOutsideFunction: true,
+      allowHashBang: true,
+      allowAwaitOutsideFunction: true,
+      allowImportExportEverywhere: true,
+    });
+  } catch {
+    try {
+      ast = Parser.parse(source, {
+        ecmaVersion: 'latest',
+        sourceType: 'script',
+        allowReturnOutsideFunction: true,
+        allowHashBang: true,
+      });
+    } catch {
+      return [];
+    }
+  }
+
+  const specifiers = new Set<string>();
+
+  simple(ast, {
+    CallExpression(node: any) {
+      const callee = node.callee;
+
+      if (callee?.type !== 'Identifier') return;
+      if (callee.name !== 'require' && callee.name !== '__require') return;
+
+      const arg = node.arguments?.[0];
+
+      if (arg?.type === 'Literal' && typeof arg.value === 'string') specifiers.add(arg.value);
+    },
+  });
+
+  return [...specifiers];
+}
+
 export function scanFile(path: string): DetectReason[] {
   let source: string;
 

@@ -1,7 +1,8 @@
+import { isBuiltin } from 'module';
 import { join } from 'path';
 import { type NodeFileTraceResult } from '@vercel/nft';
-import { scanFile } from './ast-scan.mjs';
-import { packageOfFile } from './package-utils.mjs';
+import { scanBundleExternals, scanFile } from './ast-scan.mjs';
+import { packageExists, packageNameFromSpecifier, packageOfFile } from './package-utils.mjs';
 import { type DetectReason } from './types.mjs';
 
 export interface Detection {
@@ -54,7 +55,35 @@ export function detectExternals(trace: NodeFileTraceResult, cwd: string): Detect
     for (const reason of found) add(pkg, reason);
   }
 
+  for (const pkg of detectBundleExternals(trace, cwd)) {
+    add(pkg, 'bundled-external');
+  }
+
   return { packages, reasons };
+}
+
+// scan the app's own bundled chunks (outside node_modules) for installed packages
+// referenced via rolldown's __require(...) helper that NFT never follows.
+export function detectBundleExternals(trace: NodeFileTraceResult, cwd: string): Set<string> {
+  const packages = new Set<string>();
+
+  for (const file of trace.fileList) {
+    if (file.startsWith('node_modules/') || file.includes('/node_modules/')) continue;
+    if (!file.endsWith('.js') && !file.endsWith('.cjs') && !file.endsWith('.mjs')) continue;
+
+    const fullPath = join(cwd, file);
+
+    for (const spec of scanBundleExternals(fullPath)) {
+      const pkg = packageNameFromSpecifier(spec);
+
+      if (!pkg || isBuiltin(pkg)) continue;
+      if (!packageExists(cwd, pkg)) continue;
+
+      packages.add(pkg);
+    }
+  }
+
+  return packages;
 }
 
 function packageOfWarningMessage(msg: string): string | null {

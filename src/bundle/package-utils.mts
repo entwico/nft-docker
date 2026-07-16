@@ -20,6 +20,22 @@ export function packageOfFile(file: string): string | null {
   return last;
 }
 
+// installable package name from a specifier: '@scope/pkg/sub' → '@scope/pkg', 'pkg/sub' → 'pkg'.
+// null for relative, absolute, or `node:`-prefixed specifiers.
+export function packageNameFromSpecifier(specifier: string): string | null {
+  if (!specifier) return null;
+  if (specifier.startsWith('.') || specifier.startsWith('/')) return null;
+  if (specifier.startsWith('node:')) return null;
+
+  const segments = specifier.split('/');
+
+  if (specifier.startsWith('@')) {
+    return segments.length >= 2 && segments[1] ? `${segments[0]}/${segments[1]}` : null;
+  }
+
+  return segments[0] || null;
+}
+
 export function packageJsonPath(cwd: string, pkg: string): string {
   return join(cwd, 'node_modules', pkg, 'package.json');
 }

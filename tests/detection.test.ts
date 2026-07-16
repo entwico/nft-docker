@@ -1,4 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { detectExternals } from '../src/bundle/detection.mjs';
 
 function trace(opts: { files?: string[]; warnings?: (string | Error)[] }) {
@@ -76,5 +79,77 @@ describe('detectExternals', () => {
     );
 
     expect(detection.reasons.get('pino')).toEqual(['nft-warning']);
+  });
+});
+
+describe('detectExternals — bundled chunk __require scan', () => {
+  let tmp: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'detect-bundle-test-'));
+  });
+
+  afterEach(() => {
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  function installPackage(pkg: string) {
+    const dir = join(tmp, 'node_modules', pkg);
+
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: pkg }));
+  }
+
+  function writeChunk(relPath: string, src: string) {
+    const path = join(tmp, relPath);
+
+    mkdirSync(join(path, '..'), { recursive: true });
+    writeFileSync(path, src);
+  }
+
+  it('flags an installed package referenced via __require in a bundled chunk', () => {
+    installPackage('@opentelemetry/exporter-trace-otlp-proto');
+    writeChunk('dist/server/chunks/otel.mjs', `__require("@opentelemetry/exporter-trace-otlp-proto");`);
+
+    const detection = detectExternals(trace({ files: ['dist/server/chunks/otel.mjs'] }), tmp);
+
+    expect(detection.packages.has('@opentelemetry/exporter-trace-otlp-proto')).toBe(true);
+    expect(detection.reasons.get('@opentelemetry/exporter-trace-otlp-proto')).toEqual(['bundled-external']);
+  });
+
+  it('maps a subpath specifier back to its package name', () => {
+    installPackage('some-pkg');
+    writeChunk('dist/entry.mjs', `__require("some-pkg/lib/inner.js");`);
+
+    const detection = detectExternals(trace({ files: ['dist/entry.mjs'] }), tmp);
+
+    expect(detection.packages.has('some-pkg')).toBe(true);
+  });
+
+  it('does not flag a package that is not installed', () => {
+    writeChunk('dist/entry.mjs', `__require("not-installed-pkg");`);
+
+    const detection = detectExternals(trace({ files: ['dist/entry.mjs'] }), tmp);
+
+    expect(detection.packages.has('not-installed-pkg')).toBe(false);
+  });
+
+  it('ignores builtin specifiers', () => {
+    writeChunk('dist/entry.mjs', `__require("fs"); __require("node:path");`);
+
+    const detection = detectExternals(trace({ files: ['dist/entry.mjs'] }), tmp);
+
+    expect(detection.packages.size).toBe(0);
+  });
+
+  it('does not scan files inside node_modules through the bundle pass', () => {
+    installPackage('some-pkg');
+    // a node_modules file with a plain literal require is not a "hidden" reference;
+    // the bundle pass must skip node_modules entirely.
+    writeChunk('node_modules/other/index.js', `require("some-pkg");`);
+
+    const detection = detectExternals(trace({ files: ['node_modules/other/index.js'] }), tmp);
+
+    expect(detection.packages.has('some-pkg')).toBe(false);
   });
 });

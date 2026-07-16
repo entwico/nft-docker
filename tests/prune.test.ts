@@ -200,6 +200,45 @@ describe('prune', () => {
     expect(existsSync(join(tempDir, 'node_modules', 'pkg', 'index.js'))).toBe(true);
   });
 
+  it('recovers a __require-only external from a bundled chunk without --rewrite', async () => {
+    mkdirSync(join(tempDir, 'node_modules', 'recovered-pkg', 'lib'), { recursive: true });
+    writeFileSync(
+      join(tempDir, 'node_modules', 'recovered-pkg', 'package.json'),
+      '{"name":"recovered-pkg","main":"index.js"}',
+    );
+    writeFileSync(join(tempDir, 'node_modules', 'recovered-pkg', 'index.js'), 'module.exports = 1');
+    writeFileSync(join(tempDir, 'node_modules', 'recovered-pkg', 'lib', 'extra.js'), 'module.exports = "extra"');
+
+    mkdirSync(join(tempDir, 'dist'), { recursive: true });
+    writeFileSync(join(tempDir, 'dist', 'entry.mjs'), 'export const init = () => __require("recovered-pkg");');
+
+    const { nodeFileTrace } = await import('@vercel/nft');
+
+    // main trace sees the chunk but not recovered-pkg (NFT can't follow __require).
+    // the supplemental trace of the recovered root then pulls in its index.js.
+    vi.mocked(nodeFileTrace)
+      .mockResolvedValueOnce({
+        fileList: new Set(['dist/entry.mjs']),
+        esmFileList: new Set(),
+        reasons: new Map(),
+        warnings: new Set(),
+      })
+      .mockResolvedValueOnce({
+        fileList: new Set(['node_modules/recovered-pkg/index.js']),
+        esmFileList: new Set(),
+        reasons: new Map(),
+        warnings: new Set(),
+      });
+
+    const { prune } = await import('../src/commands/prune.mjs');
+
+    await prune(['./dist/entry.mjs']);
+
+    // force-external preservation keeps the whole package, incl. the untraced extra.js.
+    expect(existsSync(join(tempDir, 'node_modules', 'recovered-pkg', 'index.js'))).toBe(true);
+    expect(existsSync(join(tempDir, 'node_modules', 'recovered-pkg', 'lib', 'extra.js'))).toBe(true);
+  });
+
   it('preserves entire directory tree for force-external packages under --rewrite', async () => {
     mkdirSync(join(tempDir, 'node_modules', 'native-pkg', 'lib', 'helpers'), { recursive: true });
     writeFileSync(join(tempDir, 'node_modules', 'native-pkg', 'package.json'), '{"name":"native-pkg"}');
