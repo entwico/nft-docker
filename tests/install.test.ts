@@ -17,7 +17,7 @@ describe('install', () => {
   let originalCwd: string;
 
   beforeEach(() => {
-    tempDir = mkdtempSync(join(tmpdir(), 'nft-docker-test-'));
+    tempDir = mkdtempSync(join(tmpdir(), 'bonsai-test-'));
     originalCwd = process.cwd();
     process.chdir(tempDir);
   });
@@ -30,7 +30,7 @@ describe('install', () => {
   it('throws when no entrypoints given', async () => {
     const { install } = await import('../src/commands/install.mjs');
 
-    await expect(install([])).rejects.toThrow('usage: nft-docker install --entrypoint <path>');
+    await expect(install([])).rejects.toThrow('usage: bonsai install <entrypoint>...');
   });
 
   it('runs frozen install with hoisted linker and prune for pnpm', async () => {

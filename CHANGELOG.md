@@ -1,4 +1,4 @@
-## [1.0.1](https://github.com/entwico/nft-docker/compare/v1.0.0...v1.0.1) (2026-03-20)
+# @entwico/bonsai
 
 ## 1.3.4
 
@@ -56,6 +56,8 @@
 
 - f0f5a1b: new `-p` / `--preserve` flag for declaring extra files NFT cannot statically resolve (e.g. fontsource woffs, locale JSON files)
 - f0f5a1b: new experimental `--rewrite` flag that rebundles entries with rolldown before NFT trims, producing significantly smaller production images
+
+## [1.0.1](https://github.com/entwico/nft-docker/compare/v1.0.0...v1.0.1) (2026-03-20)
 
 ### Bug Fixes
 

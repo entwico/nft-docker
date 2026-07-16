@@ -16,7 +16,7 @@ describe('prune', () => {
   let originalCwd: string;
 
   beforeEach(() => {
-    tempDir = mkdtempSync(join(tmpdir(), 'nft-docker-test-'));
+    tempDir = mkdtempSync(join(tmpdir(), 'bonsai-test-'));
     originalCwd = process.cwd();
     process.chdir(tempDir);
   });
@@ -29,7 +29,7 @@ describe('prune', () => {
   it('throws when no entrypoints given', async () => {
     const { prune } = await import('../src/commands/prune.mjs');
 
-    await expect(prune([])).rejects.toThrow('usage: nft-docker prune --entrypoint <path>');
+    await expect(prune([])).rejects.toThrow('usage: bonsai prune <entrypoint>...');
   });
 
   it('deletes non-traced files and keeps traced files', async () => {

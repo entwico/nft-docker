@@ -1,17 +1,17 @@
 {
-  "name": "@entwico/nft-docker",
+  "name": "@entwico/bonsai",
   "version": "1.3.4",
   "packageManager": "pnpm@10.32.1",
-  "description": "NFT-based Docker optimization for Node.js apps",
+  "description": "Ship the smallest correct production node_modules: full runtime-closure tracing + rolldown rebundle",
   "license": "MIT",
   "author": "admin@entwico.com",
   "type": "module",
   "bin": {
-    "nft-docker": "./dist/cli.mjs"
+    "bonsai": "./dist/cli.mjs"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/entwico/nft-docker.git"
+    "url": "https://github.com/entwico/bonsai.git"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

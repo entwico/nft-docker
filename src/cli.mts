@@ -21,20 +21,20 @@ const commands: Record<string, (entrypoints: string[], opts: CommandOptions) => 
 
 if (!command || !commands[command]) {
   console.error(
-    'usage: nft-docker <install|prune> ' +
-      '[-e|--entrypoint <path>]... [-p|--preserve <glob>]... ' +
-      '[-r|--rewrite] [--no-minify] [--no-sourcemap] [-v|--verbose]',
+    'usage: bonsai <install|prune> <entrypoint>... ' +
+      '[-p|--preserve <glob>]... ' +
+      '[--no-rewrite] [--no-minify] [--no-sourcemap] [-v|--verbose]',
   );
   process.exit(1);
 }
 
 try {
-  const { values } = parseArgs({
+  const { values, positionals } = parseArgs({
     args: rest,
+    allowPositionals: true,
     options: {
-      entrypoint: { type: 'string', short: 'e', multiple: true },
       preserve: { type: 'string', short: 'p', multiple: true },
-      rewrite: { type: 'boolean', short: 'r', default: false },
+      'no-rewrite': { type: 'boolean', default: false },
       'no-minify': { type: 'boolean', default: false },
       'no-sourcemap': { type: 'boolean', default: false },
       verbose: { type: 'boolean', short: 'v', default: false },
@@ -42,8 +42,8 @@ try {
     strict: true,
   });
 
-  await commands[command](values.entrypoint ?? [], {
-    rewrite: values.rewrite ?? false,
+  await commands[command](positionals, {
+    rewrite: !(values['no-rewrite'] ?? false),
     preserve: values.preserve ?? [],
     minify: !(values['no-minify'] ?? false),
     sourcemap: !(values['no-sourcemap'] ?? false),

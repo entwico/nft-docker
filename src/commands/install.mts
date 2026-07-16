@@ -10,7 +10,7 @@ const installCommands: Record<PmName, string> = {
 
 export async function install(entrypoints: string[], opts: PruneOptions = {}) {
   if (entrypoints.length === 0) {
-    throw new Error('usage: nft-docker install --entrypoint <path>');
+    throw new Error('usage: bonsai install <entrypoint>...');
   }
 
   const pm = detectPm();

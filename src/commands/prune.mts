@@ -17,7 +17,7 @@ export interface PruneOptions {
 
 export async function prune(entrypoints: string[], opts: PruneOptions = {}) {
   if (entrypoints.length === 0) {
-    throw new Error('usage: nft-docker prune --entrypoint <path>');
+    throw new Error('usage: bonsai prune <entrypoint>...');
   }
 
   const verbose = opts.verbose ?? false;

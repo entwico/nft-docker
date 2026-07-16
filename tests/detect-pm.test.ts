@@ -8,7 +8,7 @@ describe('detectPm', () => {
   let tempDir: string;
 
   beforeEach(() => {
-    tempDir = mkdtempSync(join(tmpdir(), 'nft-docker-test-'));
+    tempDir = mkdtempSync(join(tmpdir(), 'bonsai-test-'));
   });
 
   afterEach(() => {

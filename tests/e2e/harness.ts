@@ -13,7 +13,7 @@ const cli = join(repoRoot, 'dist', 'cli.mjs');
 
 const SAMPLE_SOURCES = ['package.json', 'astro.config.mjs', 'tsconfig.json', '.npmrc', 'pnpm-workspace.yaml', 'src'];
 const LOCKFILES: Record<Pm, string> = { pnpm: 'pnpm-lock.yaml', npm: 'package-lock.json' };
-// hoisted matches what `nft-docker install` forces (and the real Docker layout): every
+// hoisted matches what `bonsai install` forces (and the real Docker layout): every
 // transitive dep gets a top-level node_modules entry, which the prune's package lookups rely on.
 const INSTALL_ARGS: Record<Pm, string[]> = {
   pnpm: ['install', '--frozen-lockfile', '--node-linker=hoisted'],
@@ -53,17 +53,18 @@ export interface FlowSpec {
   rewrite: boolean;
 }
 
-// install + build, then trace-and-prune. rewrite mode (-r) additionally emits the bundled
-// entry + instrument via rolldown, turning the CJS require into the __require NFT can't see.
+// install + build, then trace-and-prune. rewrite is bonsai's default and emits the bundled
+// entry + instrument via rolldown, turning the CJS require into the __require NFT can't see;
+// --no-rewrite is the trace-only path.
 export function installBuildPrune(sampleDir: string, pm: Pm, flow: FlowSpec): void {
   run(pm, INSTALL_ARGS[pm], sampleDir);
   run(pm, ['run', 'build'], sampleDir);
 
   const args = [cli, 'prune'];
 
-  if (flow.rewrite) args.push('-r');
+  if (!flow.rewrite) args.push('--no-rewrite');
 
-  args.push('-e', 'dist/server/entry.mjs', '-e', 'src/instrument.mjs');
+  args.push('dist/server/entry.mjs', 'src/instrument.mjs');
 
   run('node', args, sampleDir);
 }
