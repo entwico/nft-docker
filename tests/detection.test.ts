@@ -82,6 +82,60 @@ describe('detectExternals', () => {
   });
 });
 
+describe('detectExternals — node_modules AST scan', () => {
+  let tmp: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'detect-nm-ast-test-'));
+  });
+
+  afterEach(() => {
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  function installPackage(pkg: string, entry: string, src: string): string {
+    const dir = join(tmp, 'node_modules', pkg);
+
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: pkg }));
+    writeFileSync(join(dir, entry), src);
+
+    return `node_modules/${pkg}/${entry}`;
+  }
+
+  it('flags a package whose source calls eval(...) as ast-eval', () => {
+    const file = installPackage('evil-eval', 'index.js', `export const run = (s) => eval(s);`);
+
+    const detection = detectExternals(trace({ files: [file] }), tmp);
+
+    expect(detection.packages.has('evil-eval')).toBe(true);
+    expect(detection.reasons.get('evil-eval')).toContain('ast-eval');
+  });
+
+  it('flags a package whose source uses new Function(...) as ast-eval', () => {
+    const file = installPackage('templater', 'compile.cjs', `module.exports = new Function('return 1');`);
+
+    const detection = detectExternals(trace({ files: [file] }), tmp);
+
+    expect(detection.packages.has('templater')).toBe(true);
+    expect(detection.reasons.get('templater')).toContain('ast-eval');
+  });
+
+  it('flags a package that calls Module.register(...) as ast-module-register', () => {
+    const file = installPackage(
+      '@scope/loader-hook',
+      'register.mjs',
+      `import { register } from 'node:module';
+       Module.register('./hook.mjs', import.meta.url);`,
+    );
+
+    const detection = detectExternals(trace({ files: [file] }), tmp);
+
+    expect(detection.packages.has('@scope/loader-hook')).toBe(true);
+    expect(detection.reasons.get('@scope/loader-hook')).toContain('ast-module-register');
+  });
+});
+
 describe('detectExternals — bundled chunk __require scan', () => {
   let tmp: string;
 

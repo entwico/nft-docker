@@ -1,2 +1,3 @@
 # standalone sample: its own workspace root so the repo-root pnpm-workspace.yaml
-# doesn't capture it. no native dependencies here, so no build allowlist is needed.
+# doesn't capture it. build scripts (e.g. playwright's browser download) are
+# intentionally left unapproved
